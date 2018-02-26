@@ -3,19 +3,19 @@
 #
 #		zimbra_monitor.sh - Monitoramento em Zabbix
 #
-# -------------------------------------------------
+# -----------------------------------------------------------------------
 # 	
 # 	Autor	: Matheus Oliveira Viana
 # 	Email	: matheus.viana@tradein.com.br
 #
-# -------------------------------------------------
+# ------------------------------------------------------------------------
 #	DESCRIÇÃO :
 #
 # 		Este programa tem como função auxiliar o 
 #		monitorameto com Zabbix. Com funções de 
 #		analise de Blacklist, serviços e fila 
 #
-# -------------------------------------------------
+# ------------------------------------------------------------------------
 #	NOTAS:
 #
 # 		Utiliza do pacote dig para fazer as 
@@ -28,17 +28,19 @@
 #		Para realizar a checagem de quantidade de emails
 #		enviados e /etc/zabbix/scripts/list_reject.txt
 #		para carregar os emails com falha de envio
-# 		Ex. : 192.168.0.1-SERVER1
+# 		
+#		Utiliza o repositorio do github para atualizações
 #
-# -------------------------------------------------
+# ------------------------------------------------------------------------
 #	MODIFICADOR_POR	(DD/MM/YYYY)
 #	Matheus.Viana	 21/02/2018	-	Primeira versão.
-#	Matheus.Viana	 26/02/2018 -	Adcionado função Sender
+#	Matheus.Viana	 26/02/2018 	-	Adicionado função Sender
 #
 #
 # Licença	: GNU GPL
 #
 WHO_CHECK=$1
+VERSION="1.1"
 
 function Services_Discovery(){
 HOUSECLEANER=$(cat /tmp/zmcontrol_status.log | grep -v Host | grep -v not | rev | cut -d' ' -f 2- | rev | sed 's/ w/_w/')
@@ -114,6 +116,69 @@ for l in $USERS
 	done
 }
 
+function Update(){
+echo "executando backup da versão anterior"
+	cp /etc/zabbix/scripts/zimbra_monitor.sh /etc/zabbix/scripts/zimbra_monitor.sh-bkp
+	rm -rf /etc/zabbix/scripts/zimbra_monitor.sh
+
+echo "Obtendo nova versão"
+	git clone https://github.com/XevetteX/zabbix/
+
+echo "Instalando nova versão"
+	cp /zabbix/Zimbra_Monitor/* /etc/zabbix/scripts/
+
+echo "Aplicando permissões de execução"
+	chmod +x /etc/zabbix/scripts/zimbra_monitor.sh
+}
+
+function Install(){
+DISTRO=$(cat /etc/issue | cut -d' ' -f 1)
+echo "Fazendo backup do Crontab do sistema"
+	cp /var/spool/cron/crontabs/root /var/spool/cron/crontabs/root-bkp
+
+echo "Criando entradas em Crontab"
+if test $DISTRO = "Ubuntu";
+	then
+		echo '*/5 * * * * su -c "/opt/zimbra/bin/zmcontrol status" zimbra > /tmp/zmcontrol_status.log' >> /var/spool/cron/crontabs/root
+		echo '* 1 * * * /etc/zabbix/scripts/zimbra_monitor.sh Sender' >> /var/spool/cron/crontabs/root
+	else
+		echo '*/5 * * * * su -c "/opt/zimbra/bin/zmcontrol status" zimbra > /tmp/zmcontrol_status.log' >> /var/spool/cron/root
+		echo '* 1 * * * /etc/zabbix/scripts/zimbra_monitor.sh Sender' >> /var/spool/cron/root
+fi
+
+echo "Criando diretorios"
+	mkdir /etc/zabbix/scripts/ 
+
+echo "Copiando arquivos"
+	cp /zabbix/* /etc/zabbix/scripts/
+
+echo "Aplicando permissões de execução"
+	chmod +x /etc/zabbix/scripts/zimbra_monitor.sh
+	
+echo "Executando backup das configurações do Zabbix_agent"
+
+	cp /etc/zabbix/zabbix_agentd.conf /etc/zabbix/zabbix_agentd.conf-bkp
+
+echo "Atualizando arquivo de configuração do zabbix-agent"
+rm -rf /etc/zabbix/zabbix_agentd.conf
+cat -s /etc/zabbix/zabbix_agentd.conf-bkp | grep -v "#" | uniq -u > /etc/zabbix/zabbix_agentd.conf
+	
+	echo "UserParameter=Mail.Services_Discovery,/etc/zabbix/zimbra_monitor.sh Services_Discovery" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Blacklist[*],/etc/zabbix/zimbra_monitor.sh Blacklist $1 $2" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Fila,/etc/zabbix/zimbra_monitor.sh Queue" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Mail.Services_Status[*],/etc/zabbix/zimbra_monitor.sh Services_Status $1" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Mail.Senders,/etc/zabbix/scripts/zimbra_monitor.sh Enviados" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Mail.Reject,/etc/zabbix/scripts/zimbra_monitor.sh Rejeitados" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Zimbra_Monitor_version,/etc/zabbix/scripts/zimbra_monitor.sh -v" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Zimbra_Monitor_Update,/etc/zabbix/scripts/zimbra_monitor.sh Update" >> /etc/zabbix/zabbix_agentd.conf
+
+echo "Reiniciando zabbix-agent"	
+pkill zabbix_agentd
+/usr/sbin/zabbix_agentd
+}
+
+# AQUI SE INICIA O PROGRAMA, TODAS AS FUNÇÕES SAO CARREGADAS A PARTIR DAQUI.
+
 if test $WHO_CHECK = "Blacklist"
 	then 
 		Blacklist $2 $3
@@ -129,6 +194,15 @@ elif test $WHO_CHECK = "Services_Status"
 elif test $WHO_CHECK = "Sender"
 	then
 		Sender
+elif test $WHO_CHECK = "-v"
+	then
+		echo $VERSION
+elif test $WHO_CHECK = "Update"
+	then
+		Update
+elif test $WHO_CHECK = "Install"
+	then
+		Install
 elif test $WHO_CHECK = "Enviados"
 	then
 		cat /etc/zabbix/scripts/list.txt | grep ">" | wc -l
