@@ -150,7 +150,7 @@ echo "Criando diretorios"
 	mkdir /etc/zabbix/scripts/ 
 
 echo "Copiando arquivos"
-	cp /zabbix/* /etc/zabbix/scripts/
+	cp /zabbix/Zimbra_Monitor/* /etc/zabbix/scripts/
 
 echo "Aplicando permissões de execução"
 	chmod +x /etc/zabbix/scripts/zimbra_monitor.sh
