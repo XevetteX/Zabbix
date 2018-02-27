@@ -174,10 +174,10 @@ rm -rf /etc/zabbix/zabbix_agentd.conf
 cat -s /etc/zabbix/zabbix_agentd.conf-bkp | grep -v "#" | uniq -u > /etc/zabbix/zabbix_agentd.conf
 
 	
-	echo "UserParameter=Mail.Services_Discovery,/etc/zabbix/zimbra_monitor.sh Services_Discovery" >> /etc/zabbix/zabbix_agentd.conf
-	echo "UserParameter=Blacklist[*],/etc/zabbix/zimbra_monitor.sh Blacklist $1 $2" >> /etc/zabbix/zabbix_agentd.conf
-	echo "UserParameter=Fila,/etc/zabbix/zimbra_monitor.sh Queue" >> /etc/zabbix/zabbix_agentd.conf
-	echo "UserParameter=Mail.Services_Status[*],/etc/zabbix/zimbra_monitor.sh Services_Status $1" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Mail.Services_Discovery,/etc/zabbix/script/zimbra_monitor.sh Services_Discovery" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Blacklist[*],/etc/zabbix/script/zimbra_monitor.sh Blacklist $1 $2" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Fila,/etc/zabbix/script/zimbra_monitor.sh Queue" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Mail.Services_Status[*],/etc/zabbix/script/zimbra_monitor.sh Services_Status $1" >> /etc/zabbix/zabbix_agentd.conf
 	echo "UserParameter=Mail.Senders,/etc/zabbix/scripts/zimbra_monitor.sh Enviados" >> /etc/zabbix/zabbix_agentd.conf
 	echo "UserParameter=Mail.Reject,/etc/zabbix/scripts/zimbra_monitor.sh Rejeitados" >> /etc/zabbix/zabbix_agentd.conf
 	echo "UserParameter=Zimbra_Monitor_version,/etc/zabbix/scripts/zimbra_monitor.sh -v" >> /etc/zabbix/zabbix_agentd.conf
