@@ -190,6 +190,7 @@ for a in $PARAMETERS
 	do
 		TESTP=$(cat /etc/zabbix/zabbix_agentd.conf | grep $a | wc -l ) 
 		if test $TESTP = "0"
+		then
 			echo "$a" >> /etc/zabbix/zabbix_agentd.conf
 		fi
 	done
