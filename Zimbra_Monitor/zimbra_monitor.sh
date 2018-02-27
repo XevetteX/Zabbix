@@ -177,21 +177,21 @@ cat -s /etc/zabbix/zabbix_agentd.conf-bkp | grep -v "#" | uniq -u > /etc/zabbix/
 # ADICIONAR NOVOS PARAMETROS AQUI E NO UPDATE
 #
 PARAMETERS="
-UserParameter=Mail.Services_Discovery,/etc/zabbix/zimbra_monitor.sh Services_Discovery
-UserParameter=Blacklist[*],/etc/zabbix/zimbra_monitor.sh Blacklist $1 $2
-UserParameter=Fila,/etc/zabbix/zimbra_monitor.sh Queue
-UserParameter=Mail.Services_Status[*],/etc/zabbix/zimbra_monitor.sh Services_Status $1
-UserParameter=Mail.Senders,/etc/zabbix/scripts/zimbra_monitor.sh Enviados
-UserParameter=Mail.Reject,/etc/zabbix/scripts/zimbra_monitor.sh Rejeitados
-UserParameter=Zimbra_Monitor_version,/etc/zabbix/scripts/zimbra_monitor.sh -v
-UserParameter=Zimbra_Monitor_Update,/etc/zabbix/scripts/zimbra_monitor.sh Update"
+UserParameter=Mail.Services_Discovery,/etc/zabbix/zimbra_monitor.sh-Services_Discovery
+UserParameter=Blacklist[*],/etc/zabbix/zimbra_monitor.sh Blacklist-$1-$2
+UserParameter=Fila,/etc/zabbix/zimbra_monitor.sh-Queue
+UserParameter=Mail.Services_Status[*],/etc/zabbix/zimbra_monitor.sh-Services_Status-$1
+UserParameter=Mail.Senders,/etc/zabbix/scripts/zimbra_monitor.sh-Enviados
+UserParameter=Mail.Reject,/etc/zabbix/scripts/zimbra_monitor.sh-Rejeitados
+UserParameter=Zimbra_Monitor_version,/etc/zabbix/scripts/zimbra_monitor.sh-Version
+UserParameter=Zimbra_Monitor_Update,/etc/zabbix/scripts/zimbra_monitor.sh-Update"
 
 for a in $PARAMETERS
 	do
-		TESTP=$(cat /etc/zabbix/zabbix_agentd.conf | grep $a | wc -l ) 
+		TESTA=$(cat /etc/zabbix/zabbix_agentd.conf | sed  's/-/ /') 
+		TESTP=$(cat /etc/zabbix/zabbix_agentd.conf | grep $TESTA | wc -l ) 
 		if test $TESTP = "0"
-		then
-			echo "$a" >> /etc/zabbix/zabbix_agentd.conf
+			echo "$TESTA" >> /etc/zabbix/zabbix_agentd.conf
 		fi
 	done
 	
@@ -218,7 +218,7 @@ elif test $WHO_CHECK = "Services_Status"
 elif test $WHO_CHECK = "Sender"
 	then
 		Sender
-elif test $WHO_CHECK = "-v"
+elif test $WHO_CHECK = "Version"
 	then
 		echo $VERSION
 elif test $WHO_CHECK = "Update"
