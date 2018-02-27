@@ -173,28 +173,15 @@ echo "Atualizando arquivo de configuração do zabbix-agent"
 rm -rf /etc/zabbix/zabbix_agentd.conf
 cat -s /etc/zabbix/zabbix_agentd.conf-bkp | grep -v "#" | uniq -u > /etc/zabbix/zabbix_agentd.conf
 
-#
-# ADICIONAR NOVOS PARAMETROS AQUI E NO UPDATE
-#
-PARAMETERS="
-UserParameter=Mail.Services_Discovery,/etc/zabbix/zimbra_monitor.sh-Services_Discovery
-UserParameter=Blacklist[*],/etc/zabbix/zimbra_monitor.sh Blacklist-$1-$2
-UserParameter=Fila,/etc/zabbix/zimbra_monitor.sh-Queue
-UserParameter=Mail.Services_Status[*],/etc/zabbix/zimbra_monitor.sh-Services_Status-$1
-UserParameter=Mail.Senders,/etc/zabbix/scripts/zimbra_monitor.sh-Enviados
-UserParameter=Mail.Reject,/etc/zabbix/scripts/zimbra_monitor.sh-Rejeitados
-UserParameter=Zimbra_Monitor_version,/etc/zabbix/scripts/zimbra_monitor.sh-Version
-UserParameter=Zimbra_Monitor_Update,/etc/zabbix/scripts/zimbra_monitor.sh-Update"
-
-for a in $PARAMETERS
-	do
-		TESTA=$(cat /etc/zabbix/zabbix_agentd.conf | sed  's/-/ /') 
-		TESTP=$(cat /etc/zabbix/zabbix_agentd.conf | grep $TESTA | wc -l ) 
-		if test $TESTP = "0"
-			echo "$TESTA" >> /etc/zabbix/zabbix_agentd.conf
-		fi
-	done
 	
+	echo "UserParameter=Mail.Services_Discovery,/etc/zabbix/zimbra_monitor.sh Services_Discovery" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Blacklist[*],/etc/zabbix/zimbra_monitor.sh Blacklist $1 $2" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Fila,/etc/zabbix/zimbra_monitor.sh Queue" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Mail.Services_Status[*],/etc/zabbix/zimbra_monitor.sh Services_Status $1" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Mail.Senders,/etc/zabbix/scripts/zimbra_monitor.sh Enviados" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Mail.Reject,/etc/zabbix/scripts/zimbra_monitor.sh Rejeitados" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Zimbra_Monitor_version,/etc/zabbix/scripts/zimbra_monitor.sh -v" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Zimbra_Monitor_Update,/etc/zabbix/scripts/zimbra_monitor.sh Update" >> /etc/zabbix/zabbix_agentd.conf
 
 echo "Reiniciando zabbix-agent"	
 pkill zabbix_agentd
