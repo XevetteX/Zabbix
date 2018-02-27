@@ -117,6 +117,14 @@ for l in $USERS
 }
 
 function Update(){
+
+
+#
+# ADICIONAR NOVOS PARAMETROS AQUI E NO UPDATE
+#
+
+
+
 echo "executando backup da versão anterior"
 	cp /etc/zabbix/scripts/zimbra_monitor.sh /etc/zabbix/scripts/zimbra_monitor.sh-bkp
 	rm -rf /etc/zabbix/scripts/zimbra_monitor.sh
@@ -133,15 +141,17 @@ echo "Aplicando permissões de execução"
 
 function Install(){
 DISTRO=$(cat /etc/issue | cut -d' ' -f 1)
-echo "Fazendo backup do Crontab do sistema"
-	cp /var/spool/cron/crontabs/root /var/spool/cron/crontabs/root-bkp
 
 echo "Criando entradas em Crontab"
 if test $DISTRO = "Ubuntu";
 	then
+		echo "Fazendo backup do Crontab do sistema"
+		cp /var/spool/cron/crontabs/root /var/spool/cron/crontabs/root-bkp
 		echo '*/5 * * * * su -c "/opt/zimbra/bin/zmcontrol status" zimbra > /tmp/zmcontrol_status.log' >> /var/spool/cron/crontabs/root
 		echo '* 1 * * * /etc/zabbix/scripts/zimbra_monitor.sh Sender' >> /var/spool/cron/crontabs/root
 	else
+		echo "Fazendo backup do Crontab do sistema"
+		cp /var/spool/cron/root /var/spool/cron/root-bkp
 		echo '*/5 * * * * su -c "/opt/zimbra/bin/zmcontrol status" zimbra > /tmp/zmcontrol_status.log' >> /var/spool/cron/root
 		echo '* 1 * * * /etc/zabbix/scripts/zimbra_monitor.sh Sender' >> /var/spool/cron/root
 fi
@@ -150,7 +160,7 @@ echo "Criando diretorios"
 	mkdir /etc/zabbix/scripts/ 
 
 echo "Copiando arquivos"
-	cp /zabbix/Zimbra_Monitor/* /etc/zabbix/scripts/
+	cp /Zabbix/Zimbra_Monitor/* /etc/zabbix/scripts/
 
 echo "Aplicando permissões de execução"
 	chmod +x /etc/zabbix/scripts/zimbra_monitor.sh
@@ -162,15 +172,28 @@ echo "Executando backup das configurações do Zabbix_agent"
 echo "Atualizando arquivo de configuração do zabbix-agent"
 rm -rf /etc/zabbix/zabbix_agentd.conf
 cat -s /etc/zabbix/zabbix_agentd.conf-bkp | grep -v "#" | uniq -u > /etc/zabbix/zabbix_agentd.conf
+
+#
+# ADICIONAR NOVOS PARAMETROS AQUI E NO UPDATE
+#
+PARAMETERS="
+UserParameter=Mail.Services_Discovery,/etc/zabbix/zimbra_monitor.sh Services_Discovery
+UserParameter=Blacklist[*],/etc/zabbix/zimbra_monitor.sh Blacklist $1 $2
+UserParameter=Fila,/etc/zabbix/zimbra_monitor.sh Queue
+UserParameter=Mail.Services_Status[*],/etc/zabbix/zimbra_monitor.sh Services_Status $1
+UserParameter=Mail.Senders,/etc/zabbix/scripts/zimbra_monitor.sh Enviados
+UserParameter=Mail.Reject,/etc/zabbix/scripts/zimbra_monitor.sh Rejeitados
+UserParameter=Zimbra_Monitor_version,/etc/zabbix/scripts/zimbra_monitor.sh -v
+UserParameter=Zimbra_Monitor_Update,/etc/zabbix/scripts/zimbra_monitor.sh Update"
+
+for a in $PARAMETERS
+	do
+		TESTP=$(cat /etc/zabbix/zabbix_agentd.conf | grep $a | wc -l ) 
+		if test $TESTP = "0"
+			echo "$a" >> /etc/zabbix/zabbix_agentd.conf
+		fi
+	done
 	
-	echo "UserParameter=Mail.Services_Discovery,/etc/zabbix/zimbra_monitor.sh Services_Discovery" >> /etc/zabbix/zabbix_agentd.conf
-	echo "UserParameter=Blacklist[*],/etc/zabbix/zimbra_monitor.sh Blacklist $1 $2" >> /etc/zabbix/zabbix_agentd.conf
-	echo "UserParameter=Fila,/etc/zabbix/zimbra_monitor.sh Queue" >> /etc/zabbix/zabbix_agentd.conf
-	echo "UserParameter=Mail.Services_Status[*],/etc/zabbix/zimbra_monitor.sh Services_Status $1" >> /etc/zabbix/zabbix_agentd.conf
-	echo "UserParameter=Mail.Senders,/etc/zabbix/scripts/zimbra_monitor.sh Enviados" >> /etc/zabbix/zabbix_agentd.conf
-	echo "UserParameter=Mail.Reject,/etc/zabbix/scripts/zimbra_monitor.sh Rejeitados" >> /etc/zabbix/zabbix_agentd.conf
-	echo "UserParameter=Zimbra_Monitor_version,/etc/zabbix/scripts/zimbra_monitor.sh -v" >> /etc/zabbix/zabbix_agentd.conf
-	echo "UserParameter=Zimbra_Monitor_Update,/etc/zabbix/scripts/zimbra_monitor.sh Update" >> /etc/zabbix/zabbix_agentd.conf
 
 echo "Reiniciando zabbix-agent"	
 pkill zabbix_agentd
