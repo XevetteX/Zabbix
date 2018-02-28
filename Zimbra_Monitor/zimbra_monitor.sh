@@ -40,7 +40,7 @@
 # Licença	: GNU GPL
 #
 WHO_CHECK=$1
-VERSION="1.1"
+VERSION="1"
 
 function Services_Discovery(){
 HOUSECLEANER=$(cat /tmp/zmcontrol_status.log | grep -v Host | grep -v not | rev | cut -d' ' -f 2- | rev | sed 's/ w/_w/')
@@ -117,8 +117,8 @@ for l in $USERS
 }
 
 function Update(){
-OLD_VERSION=$(cat /etc/zabbix/scripts/zimbra_monitor.sh version)
-if test $OLD_VERSION -lt 1.1
+OLD_SUBVER=$(cat /etc/zabbix/scripts/zimbra_monitor.sh version)
+if test $OLD_SUBVER -lt 1
 	then
 		echo "Apagando arquivos de instalação da versão anterior"
 
@@ -138,7 +138,7 @@ if test $OLD_VERSION -lt 1.1
 			cp /Zabbix/Zimbra_Monitor/* /etc/zabbix/scripts/
 
 		echo "Aplicando permissões de execução"
-	
+		
 			chmod +x /etc/zabbix/scripts/zimbra_monitor.sh
 	
 		echo "Executando backup das configurações do Zabbix_agent"
@@ -232,7 +232,7 @@ USO: $0 [função] [parametro 1] [parametro 2] ...
 	FUNÇOES
 	
 		- fila								Mostra a fila de email.
-		- blacklist [dominio] [blacklist]								Consulta se o dominio esta na blacklist especificada.
+		- blacklist [dominio] [blacklist]	Consulta se o dominio esta na blacklist especificada.
 		- reject							Consulta quantos emails falharam o envio no dia.
 		
 	FUNÇOES ESPECIAIS	
