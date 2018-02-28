@@ -227,24 +227,24 @@ USO: $0 [função] [parametro 1] [parametro 2] ...
 FUNÇOES
 
 	- blacklist [dominio] [blacklist]		Consulta se o dominio esta na blacklist especificada.
-	- fila								Mostra a fila de email.
-	- reject							Consulta quantos emails falharam o envio no dia.
+	- fila						Mostra a fila de email.
+	- reject					Consulta quantos emails falharam o envio no dia.
 		
 FUNÇOES ESPECIAIS	
 	
 	Os comandos seguintes utilizam arquivos especificos para serem realizados,
 	Ler notas no cabeçario do programa.
 		
-	- serv_discovery					Coleta todos os serviços do zimbra.
-	- serv_status						Coleta o status dos serviços do zimbra. 
-	- sent								Consulta quantos emails foram enviados no dia.
+	- serv_discovery				Coleta todos os serviços do zimbra.
+	- serv_status					Coleta o status dos serviços do zimbra. 
+	- sent						Consulta quantos emails foram enviados no dia.
 
 OUTRAS FUNÇOES
 
-	- help								Mostra esta tela de ajuda.
-	- version							Mostra a versão do programa.
-	- update							Checa novas versões, e atualiza o programa.
-	- install							Instala a ultima versão obtida.
+	- help						Mostra esta tela de ajuda.
+	- version					Mostra a versão do programa.
+	- update					Checa novas versões, e atualiza o programa.
+	- install					Instala a ultima versão obtida.
 	
 	"
 BAD_PAR="
