@@ -117,52 +117,82 @@ for l in $USERS
 }
 
 function Update(){
+OLD_VERSION=$(cat /etc/zabbix/scripts/zimbra_monitor.sh version)
+if test $OLD_VERSION -lt 1.1
+	then
+		echo "Apagando arquivos de instalação da versão anterior"
 
+			rm -rf /Zabbix/
 
-#
-# ADICIONAR NOVOS PARAMETROS AQUI E NO UPDATE
-#
+		echo "executando backup da versão anterior"
+	
+			cp /etc/zabbix/scripts/zimbra_monitor.sh /etc/zabbix/scripts/zimbra_monitor.sh-bkp
+			rm -rf /etc/zabbix/scripts/zimbra_monitor.sh
 
+		echo "Obtendo nova versão"
+	
+			git clone https://github.com/XevetteX/Zabbix/
 
+		echo "Instalando nova versão"
+	
+			cp /Zabbix/Zimbra_Monitor/* /etc/zabbix/scripts/
 
-echo "executando backup da versão anterior"
-	cp /etc/zabbix/scripts/zimbra_monitor.sh /etc/zabbix/scripts/zimbra_monitor.sh-bkp
-	rm -rf /etc/zabbix/scripts/zimbra_monitor.sh
+		echo "Aplicando permissões de execução"
+	
+			chmod +x /etc/zabbix/scripts/zimbra_monitor.sh
+	
+		echo "Executando backup das configurações do Zabbix_agent"
 
-echo "Obtendo nova versão"
-	git clone https://github.com/XevetteX/zabbix/
+			cp /etc/zabbix/zabbix_agentd.conf /etc/zabbix/zabbix_agentd.conf-bkp
 
-echo "Instalando nova versão"
-	cp /zabbix/Zimbra_Monitor/* /etc/zabbix/scripts/
+		echo "Atualizando arquivo de configuração do zabbix-agent"
+	
+			rm -rf /etc/zabbix/zabbix_agentd.conf
+			cat -s /etc/zabbix/zabbix_agentd.conf-bkp | grep -v "#" | uniq -u > /etc/zabbix/zabbix_agentd.conf
 
-echo "Aplicando permissões de execução"
-	chmod +x /etc/zabbix/scripts/zimbra_monitor.sh
+			#
+			#APLICAR AQUI NOVOS PARAMETROS
+			#Exemplo abaixo
+			#echo "UserParameter=Mail.Services_Discovery,/etc/zabbix/scripts/zimbra_monitor.sh Services_Discovery" >> /etc/zabbix/zabbix_agentd.conf
+	
+		echo "Reiniciando zabbix-agent"	
+	
+			pkill zabbix_agentd
+			/usr/sbin/zabbix_agentd
+	
+	else 
+		echo "Você ja possui a versão mais atual"
+fi
 }
 
 function Install(){
 DISTRO=$(cat /etc/issue | cut -d' ' -f 1)
 
 echo "Criando entradas em Crontab"
-if test $DISTRO = "Ubuntu";
-	then
-		echo "Fazendo backup do Crontab do sistema"
-		cp /var/spool/cron/crontabs/root /var/spool/cron/crontabs/root-bkp
-		echo '*/5 * * * * su -c "/opt/zimbra/bin/zmcontrol status" zimbra > /tmp/zmcontrol_status.log' >> /var/spool/cron/crontabs/root
-		echo '* 1 * * * /etc/zabbix/scripts/zimbra_monitor.sh Sender' >> /var/spool/cron/crontabs/root
-	else
-		echo "Fazendo backup do Crontab do sistema"
-		cp /var/spool/cron/root /var/spool/cron/root-bkp
-		echo '*/5 * * * * su -c "/opt/zimbra/bin/zmcontrol status" zimbra > /tmp/zmcontrol_status.log' >> /var/spool/cron/root
-		echo '* 1 * * * /etc/zabbix/scripts/zimbra_monitor.sh Sender' >> /var/spool/cron/root
-fi
+	
+	if test $DISTRO = "Ubuntu";
+		then
+			echo "Fazendo backup do Crontab do sistema"
+			cp /var/spool/cron/crontabs/root /var/spool/cron/crontabs/root-bkp
+			echo '*/5 * * * * su -c "/opt/zimbra/bin/zmcontrol status" zimbra > /tmp/zmcontrol_status.log' >> /var/spool/cron/crontabs/root
+			echo '* 1 * * * /etc/zabbix/scripts/zimbra_monitor.sh Sender' >> /var/spool/cron/crontabs/root
+		else
+			echo "Fazendo backup do Crontab do sistema"
+			cp /var/spool/cron/root /var/spool/cron/root-bkp
+			echo '*/5 * * * * su -c "/opt/zimbra/bin/zmcontrol status" zimbra > /tmp/zmcontrol_status.log' >> /var/spool/cron/root
+			echo '* 1 * * * /etc/zabbix/scripts/zimbra_monitor.sh Sender' >> /var/spool/cron/root
+	fi
 
 echo "Criando diretorios"
+	
 	mkdir /etc/zabbix/scripts/ 
 
 echo "Copiando arquivos"
+	
 	cp /Zabbix/Zimbra_Monitor/* /etc/zabbix/scripts/
 
 echo "Aplicando permissões de execução"
+	
 	chmod +x /etc/zabbix/scripts/zimbra_monitor.sh
 	
 echo "Executando backup das configurações do Zabbix_agent"
@@ -170,54 +200,89 @@ echo "Executando backup das configurações do Zabbix_agent"
 	cp /etc/zabbix/zabbix_agentd.conf /etc/zabbix/zabbix_agentd.conf-bkp
 
 echo "Atualizando arquivo de configuração do zabbix-agent"
-rm -rf /etc/zabbix/zabbix_agentd.conf
-cat -s /etc/zabbix/zabbix_agentd.conf-bkp | grep -v "#" | uniq -u > /etc/zabbix/zabbix_agentd.conf
 
-	
-	echo "UserParameter=Mail.Services_Discovery,/etc/zabbix/scripts/zimbra_monitor.sh Services_Discovery" >> /etc/zabbix/zabbix_agentd.conf
-	echo "UserParameter=Blacklist[*],/etc/zabbix/scripts/zimbra_monitor.sh Blacklist $1 $2" >> /etc/zabbix/zabbix_agentd.conf
-	echo "UserParameter=Fila,/etc/zabbix/scripts/zimbra_monitor.sh Queue" >> /etc/zabbix/zabbix_agentd.conf
-	echo "UserParameter=Mail.Services_Status[*],/etc/zabbix/scripts/zimbra_monitor.sh Services_Status $1" >> /etc/zabbix/zabbix_agentd.conf
-	echo "UserParameter=Mail.Senders,/etc/zabbix/scripts/zimbra_monitor.sh Enviados" >> /etc/zabbix/zabbix_agentd.conf
-	echo "UserParameter=Mail.Reject,/etc/zabbix/scripts/zimbra_monitor.sh Rejeitados" >> /etc/zabbix/zabbix_agentd.conf
-	echo "UserParameter=Zimbra_Monitor_version,/etc/zabbix/scripts/zimbra_monitor.sh -v" >> /etc/zabbix/zabbix_agentd.conf
-	echo "UserParameter=Zimbra_Monitor_Update,/etc/zabbix/scripts/zimbra_monitor.sh Update" >> /etc/zabbix/zabbix_agentd.conf
+	rm -rf /etc/zabbix/zabbix_agentd.conf
+	cat -s /etc/zabbix/zabbix_agentd.conf-bkp | grep -v "#" | grep -v "Timeout=3"| uniq -u > /etc/zabbix/zabbix_agentd.conf
+
+	echo "Timeout=30" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Mail.Services_Discovery,/etc/zabbix/scripts/zimbra_monitor.sh serv_discovery" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Blacklist[*],/etc/zabbix/scripts/zimbra_monitor.sh blacklist $1 $2" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Fila,/etc/zabbix/scripts/zimbra_monitor.sh fila" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Mail.Services_Status[*],/etc/zabbix/scripts/zimbra_monitor.sh serv_status $1" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Mail.Sent,/etc/zabbix/scripts/zimbra_monitor.sh sent" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Mail.Reject,/etc/zabbix/scripts/zimbra_monitor.sh reject" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Zimbra_Monitor_Version,/etc/zabbix/scripts/zimbra_monitor.sh version" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Zimbra_Monitor_Update,/etc/zabbix/scripts/zimbra_monitor.sh update" >> /etc/zabbix/zabbix_agentd.conf
 
 echo "Reiniciando zabbix-agent"	
-pkill zabbix_agentd
-/usr/sbin/zabbix_agentd
+	pkill zabbix_agentd
+	/usr/sbin/zabbix_agentd
 }
+
+# VARIAVEIS DO MENU
+HELP="
+		Zimbra Monitor $VERSION
+USO: $0 [função] [parametro 1] [parametro 2] ...
+
+		- help								Mostra esta tela de ajuda.
+		- version							Mostra a versão do programa.
+		- update							Checa novas versões, e atualiza o programa.
+		- install 							Instala a ultima versão obtida.
+	
+	FUNÇOES
+	
+		- fila								Mostra a fila de email.
+		- blacklist [dominio] [blacklist]								Consulta se o dominio esta na blacklist especificada.
+		- reject							Consulta quantos emails falharam o envio no dia.
+		
+	FUNÇOES ESPECIAIS	
+	
+		Os comandos seguintes utilizam arquivos especificos para serem realizados,
+		Ler notas no cabeçario do programa.
+		
+		- serv_discovery					Coleta todos os serviços do zimbra.
+		- serv_status						Coleta o status dos serviços do zimbra. 
+		- sent							Consulta quantos emails foram enviados no dia.
+"
+BAD_PAR="
+$0: opção invalida -- '$1'
+Use '$0 help' para mais informações."
 
 # AQUI SE INICIA O PROGRAMA, TODAS AS FUNÇÕES SAO CARREGADAS A PARTIR DAQUI.
 
-if test $WHO_CHECK = "Blacklist"
+if test $WHO_CHECK = "blacklist"
 	then 
 		Blacklist $2 $3
-elif test $WHO_CHECK = "Queue"
+elif test $WHO_CHECK = "fila"
 	then
 		Queue
-elif test $WHO_CHECK = "Services_Discovery"
+elif test $WHO_CHECK = "serv_discovery"
 	then
 		Services_Discovery
-elif test $WHO_CHECK = "Services_Status"
+elif test $WHO_CHECK = "serv_status"
 	then
 		Services_Status $2
-elif test $WHO_CHECK = "Sender"
+elif test $WHO_CHECK = "sender"
 	then
 		Sender
-elif test $WHO_CHECK = "Version"
+elif test $WHO_CHECK = "version"
 	then
 		echo $VERSION
-elif test $WHO_CHECK = "Update"
+elif test $WHO_CHECK = "update"
 	then
 		Update
-elif test $WHO_CHECK = "Install"
+elif test $WHO_CHECK = "install"
 	then
 		Install
-elif test $WHO_CHECK = "Enviados"
+elif test $WHO_CHECK = "Sent"
 	then
 		cat /etc/zabbix/scripts/list.txt | grep ">" | wc -l
-elif test $WHO_CHECK = "Rejeitados"
+elif test $WHO_CHECK = "reject"
 	then
 		cat /etc/zabbix/scripts/list_reject.txt | grep ">" | wc -l
+elif test $WHO_CHECK = "help"
+	then 
+		echo "$HELP"
+	else 
+		echo $BAD_PAR
 fi
