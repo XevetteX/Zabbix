@@ -40,7 +40,7 @@
 # Licença	: GNU GPL
 #
 WHO_CHECK=$1
-VERSION="1"
+VERSION="1.0"
 
 function Services_Discovery(){
 HOUSECLEANER=$(cat /tmp/zmcontrol_status.log | grep -v Host | grep -v not | rev | cut -d' ' -f 2- | rev | sed 's/ w/_w/')
@@ -117,52 +117,45 @@ for l in $USERS
 }
 
 function Update(){
-OLD_SUBVER=$(/etc/zabbix/scripts/zimbra_monitor.sh version)
-if test $OLD_SUBVER -lt 1.1
-	then
-		echo "Apagando arquivos de instalação da versão anterior"
+echo "Apagando arquivos de instalação da versão anterior"
 
-			rm -rf /Zabbix/
+	rm -rf /Zabbix/
 
-		echo "executando backup da versão anterior"
+echo "executando backup da versão anterior"
 	
-			cp /etc/zabbix/scripts/zimbra_monitor.sh /etc/zabbix/scripts/zimbra_monitor.sh-bkp
-			rm -rf /etc/zabbix/scripts/zimbra_monitor.sh
+	cp /etc/zabbix/scripts/zimbra_monitor.sh /etc/zabbix/scripts/zimbra_monitor.sh-bkp
+	rm -rf /etc/zabbix/scripts/zimbra_monitor.sh
 
-		echo "Obtendo nova versão"
+echo "Obtendo nova versão"
 	
-			git clone https://github.com/XevetteX/Zabbix/
+	git clone https://github.com/XevetteX/Zabbix/
 
-		echo "Instalando nova versão"
+echo "Instalando nova versão"
 	
-			cp /Zabbix/Zimbra_Monitor/* /etc/zabbix/scripts/
+	cp /Zabbix/Zimbra_Monitor/* /etc/zabbix/scripts/
 
-		echo "Aplicando permissões de execução"
+echo "Aplicando permissões de execução"
 		
-			chmod +x /etc/zabbix/scripts/zimbra_monitor.sh
+	chmod +x /etc/zabbix/scripts/zimbra_monitor.sh
 	
-		echo "Executando backup das configurações do Zabbix_agent"
+echo "Executando backup das configurações do Zabbix_agent"
 
-			cp /etc/zabbix/zabbix_agentd.conf /etc/zabbix/zabbix_agentd.conf-bkp
+	cp /etc/zabbix/zabbix_agentd.conf /etc/zabbix/zabbix_agentd.conf-bkp
 
-		echo "Atualizando arquivo de configuração do zabbix-agent"
+echo "Atualizando arquivo de configuração do zabbix-agent"
 	
-			rm -rf /etc/zabbix/zabbix_agentd.conf
-			cat -s /etc/zabbix/zabbix_agentd.conf-bkp | grep -v "#" | uniq -u > /etc/zabbix/zabbix_agentd.conf
+	rm -rf /etc/zabbix/zabbix_agentd.conf
+	cat -s /etc/zabbix/zabbix_agentd.conf-bkp | grep -v "#" | uniq -u > /etc/zabbix/zabbix_agentd.conf
 
-			#
-			#APLICAR AQUI NOVOS PARAMETROS
-			#Exemplo abaixo
-			#echo "UserParameter=Mail.Services_Discovery,/etc/zabbix/scripts/zimbra_monitor.sh Services_Discovery" >> /etc/zabbix/zabbix_agentd.conf
+	#
+	#APLICAR AQUI NOVOS PARAMETROS
+	#Exemplo abaixo
+	#echo "UserParameter=Mail.Services_Discovery,/etc/zabbix/scripts/zimbra_monitor.sh Services_Discovery" >> /etc/zabbix/zabbix_agentd.conf
 	
-		echo "Reiniciando zabbix-agent"	
+echo "Reiniciando zabbix-agent"	
 	
-			pkill zabbix_agentd
-			/usr/sbin/zabbix_agentd
-	
-	else 
-		echo "Você ja possui a versão mais atual"
-fi
+	pkill zabbix_agentd
+	/usr/sbin/zabbix_agentd
 }
 
 function Install(){
