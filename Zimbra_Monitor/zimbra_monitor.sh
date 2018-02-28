@@ -117,8 +117,8 @@ for l in $USERS
 }
 
 function Update(){
-OLD_SUBVER=$(cat /etc/zabbix/scripts/zimbra_monitor.sh version)
-if test $OLD_SUBVER -lt 1
+OLD_SUBVER=$(/etc/zabbix/scripts/zimbra_monitor.sh version)
+if test $OLD_SUBVER -lt 1.1
 	then
 		echo "Apagando arquivos de instalação da versão anterior"
 
@@ -222,7 +222,7 @@ echo "Reiniciando zabbix-agent"
 # VARIAVEIS DO MENU
 HELP="
 		Zimbra Monitor $VERSION
-USO: $0 [função] [parametro 1] [parametro 2] ...
+USO: zimbra_monitor.sh [função] [parametro 1] [parametro 2] ...
 
 FUNÇOES
 
@@ -248,8 +248,8 @@ OUTRAS FUNÇOES
 	
 	"
 BAD_PAR="
-$0: opção invalida -- '$1'
-Use '$0 help' para mais informações."
+opção invalida -- '$1'
+Use 'zimbra_monitor.sh help' para mais informações."
 
 # AQUI SE INICIA O PROGRAMA, TODAS AS FUNÇÕES SAO CARREGADAS A PARTIR DAQUI.
 
