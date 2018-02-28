@@ -232,7 +232,7 @@ USO: $0 [função] [parametro 1] [parametro 2] ...
 	FUNÇOES
 	
 		- fila								Mostra a fila de email.
-		- blacklist [dominio] [blacklist]	Consulta se o dominio esta na blacklist especificada.
+		- blacklist [dominio] [blacklist]		Consulta se o dominio esta na blacklist especificada.
 		- reject							Consulta quantos emails falharam o envio no dia.
 		
 	FUNÇOES ESPECIAIS	
