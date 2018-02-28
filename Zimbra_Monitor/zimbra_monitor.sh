@@ -224,25 +224,25 @@ HELP="
 		Zimbra Monitor $VERSION
 USO: $0 [função] [parametro 1] [parametro 2] ...
 
-		- help	Mostra esta tela de ajuda.
-		- version	Mostra a versão do programa.
-		- update	Checa novas versões, e atualiza o programa.
-		- install	Instala a ultima versão obtida.
+		- help								Mostra esta tela de ajuda.
+		- version							Mostra a versão do programa.
+		- update							Checa novas versões, e atualiza o programa.
+		- install							Instala a ultima versão obtida.
 	
 	FUNÇOES
 	
-		- fila		Mostra a fila de email.
+		- fila								Mostra a fila de email.
 		- blacklist [dominio] [blacklist]	Consulta se o dominio esta na blacklist especificada.
-		- reject	Consulta quantos emails falharam o envio no dia.
+		- reject							Consulta quantos emails falharam o envio no dia.
 		
 	FUNÇOES ESPECIAIS	
 	
 		Os comandos seguintes utilizam arquivos especificos para serem realizados,
 		Ler notas no cabeçario do programa.
 		
-		- serv_discovery	Coleta todos os serviços do zimbra.
-		- serv_status	Coleta o status dos serviços do zimbra. 
-		- sent	Consulta quantos emails foram enviados no dia.
+		- serv_discovery					Coleta todos os serviços do zimbra.
+		- serv_status						Coleta o status dos serviços do zimbra. 
+		- sent								Consulta quantos emails foram enviados no dia.
 "
 BAD_PAR="
 $0: opção invalida -- '$1'
