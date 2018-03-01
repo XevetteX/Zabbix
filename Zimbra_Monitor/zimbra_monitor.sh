@@ -39,8 +39,6 @@
 #
 # Licença	: GNU GPL
 #
-WHO_CHECK=$1
-VERSION="1.0"
 
 function Services_Discovery(){
 HOUSECLEANER=$(cat /tmp/zmcontrol_status.log | grep -v Host | grep -v not | rev | cut -d' ' -f 2- | rev | sed 's/ w/_w/')
@@ -138,19 +136,16 @@ echo "Aplicando permissões de execução"
 		
 	chmod +x /etc/zabbix/scripts/zimbra_monitor.sh
 	
-echo "Executando backup das configurações do Zabbix_agent"
-
-	cp /etc/zabbix/zabbix_agentd.conf /etc/zabbix/zabbix_agentd.conf-bkp
-
-echo "Atualizando arquivo de configuração do zabbix-agent"
-	
-	rm -rf /etc/zabbix/zabbix_agentd.conf
-	cat -s /etc/zabbix/zabbix_agentd.conf-bkp | grep -v "#" | uniq -u > /etc/zabbix/zabbix_agentd.conf
-
-	#
-	#APLICAR AQUI NOVOS PARAMETROS
-	#Exemplo abaixo
-	#echo "UserParameter=Mail.Services_Discovery,/etc/zabbix/scripts/zimbra_monitor.sh Services_Discovery" >> /etc/zabbix/zabbix_agentd.conf
+# ABAIXO SO MODIFIQUE SE A ATUALIZAÇÃO TIVER NOVAS FUNÇÕES
+#echo "Executando backup das configurações do Zabbix_agent"
+#	cp /etc/zabbix/zabbix_agentd.conf /etc/zabbix/zabbix_agentd.conf-bkp
+#echo "Atualizando arquivo de configuração do zabbix-agent"
+#	rm -rf /etc/zabbix/zabbix_agentd.conf
+#	cat -s /etc/zabbix/zabbix_agentd.conf-bkp | grep -v "#" | uniq -u > /etc/zabbix/zabbix_agentd.conf
+#
+#APLICAR AQUI NOVOS PARAMETROS
+#Exemplo abaixo
+#	echo "UserParameter=Mail.Services_Discovery,/etc/zabbix/scripts/zimbra_monitor.sh Services_Discovery" >> /etc/zabbix/zabbix_agentd.conf
 	
 echo "Reiniciando zabbix-agent"	
 	
@@ -168,12 +163,12 @@ echo "Criando entradas em Crontab"
 			echo "Fazendo backup do Crontab do sistema"
 			cp /var/spool/cron/crontabs/root /var/spool/cron/crontabs/root-bkp
 			echo '*/5 * * * * su -c "/opt/zimbra/bin/zmcontrol status" zimbra > /tmp/zmcontrol_status.log' >> /var/spool/cron/crontabs/root
-			echo '* 1 * * * /etc/zabbix/scripts/zimbra_monitor.sh Sender' >> /var/spool/cron/crontabs/root
+			echo '59 23 * * * /etc/zabbix/scripts/zimbra_monitor.sh sender' >> /var/spool/cron/crontabs/root
 		else
 			echo "Fazendo backup do Crontab do sistema"
 			cp /var/spool/cron/root /var/spool/cron/root-bkp
 			echo '*/5 * * * * su -c "/opt/zimbra/bin/zmcontrol status" zimbra > /tmp/zmcontrol_status.log' >> /var/spool/cron/root
-			echo '* 1 * * * /etc/zabbix/scripts/zimbra_monitor.sh Sender' >> /var/spool/cron/root
+			echo '59 23 * * * /etc/zabbix/scripts/zimbra_monitor.sh sender' >> /var/spool/cron/root
 	fi
 
 echo "Criando diretorios"
@@ -213,6 +208,12 @@ echo "Reiniciando zabbix-agent"
 }
 
 # VARIAVEIS DO MENU
+WHO_CHECK=$1
+VERSION="1.0"
+BAD_PAR="
+opção invalida -- '$1'
+Use 'zimbra_monitor.sh help' para mais informações."
+
 HELP="
 		Zimbra Monitor $VERSION
 USO: zimbra_monitor.sh [função] [parametro 1] [parametro 2] ...
@@ -221,7 +222,6 @@ FUNÇOES
 
 	- blacklist [dominio] [blacklist]		Consulta se o dominio esta na blacklist especificada.
 	- fila						Mostra a fila de email.
-	- reject					Consulta quantos emails falharam o envio no dia.
 		
 FUNÇOES ESPECIAIS	
 	
@@ -231,6 +231,7 @@ FUNÇOES ESPECIAIS
 	- serv_discovery				Coleta todos os serviços do zimbra.
 	- serv_status					Coleta o status dos serviços do zimbra. 
 	- sent						Consulta quantos emails foram enviados no dia.
+	- reject					Consulta quantos emails falharam o envio no dia.
 
 OUTRAS FUNÇOES
 
@@ -240,10 +241,6 @@ OUTRAS FUNÇOES
 	- install					Instala a ultima versão obtida.
 	
 	"
-BAD_PAR="
-opção invalida -- '$1'
-Use 'zimbra_monitor.sh help' para mais informações."
-
 # AQUI SE INICIA O PROGRAMA, TODAS AS FUNÇÕES SAO CARREGADAS A PARTIR DAQUI.
 
 if test $WHO_CHECK = "blacklist"
@@ -270,7 +267,7 @@ elif test $WHO_CHECK = "update"
 elif test $WHO_CHECK = "install"
 	then
 		Install
-elif test $WHO_CHECK = "Sent"
+elif test $WHO_CHECK = "sent"
 	then
 		cat /etc/zabbix/scripts/list.txt | grep ">" | wc -l
 elif test $WHO_CHECK = "reject"
