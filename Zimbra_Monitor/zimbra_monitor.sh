@@ -95,6 +95,9 @@ if [ -z $LOAD_BL ]
 fi
 }
 
+#
+#							FIXME
+#
 #function Sender(){
 #rm -rf /etc/zabbix/scripts/list.txt
 #rm -rf /etc/zabbix/scripts/list_reject.txt
