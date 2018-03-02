@@ -163,12 +163,12 @@ echo "Criando entradas em Crontab"
 			echo "Fazendo backup do Crontab do sistema"
 			cp /var/spool/cron/crontabs/root /var/spool/cron/crontabs/root-bkp
 			echo '*/5 * * * * su -c "/opt/zimbra/bin/zmcontrol status" zimbra > /tmp/zmcontrol_status.log' >> /var/spool/cron/crontabs/root
-			echo '59 23 * * * /etc/zabbix/scripts/zimbra_monitor.sh sender' >> /var/spool/cron/crontabs/root
+			echo '#* 23 * * * /etc/zabbix/scripts/zimbra_monitor.sh sender' >> /var/spool/cron/crontabs/root
 		else
 			echo "Fazendo backup do Crontab do sistema"
 			cp /var/spool/cron/root /var/spool/cron/root-bkp
 			echo '*/5 * * * * su -c "/opt/zimbra/bin/zmcontrol status" zimbra > /tmp/zmcontrol_status.log' >> /var/spool/cron/root
-			echo '59 23 * * * /etc/zabbix/scripts/zimbra_monitor.sh sender' >> /var/spool/cron/root
+			echo '#* 23 * * * /etc/zabbix/scripts/zimbra_monitor.sh sender' >> /var/spool/cron/root
 	fi
 
 echo "Criando diretorios"
@@ -257,7 +257,7 @@ elif test $WHO_CHECK = "serv_status"
 		Services_Status $2
 elif test $WHO_CHECK = "sender"
 	then
-		Sender
+	#	Sender
 elif test $WHO_CHECK = "version"
 	then
 		echo $VERSION
