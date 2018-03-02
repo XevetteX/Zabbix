@@ -95,24 +95,24 @@ if [ -z $LOAD_BL ]
 fi
 }
 
-function Sender(){
-rm -rf /etc/zabbix/scripts/list.txt
-rm -rf /etc/zabbix/scripts/list_reject.txt
-DATE=$(date +%Y%m%d)
-/opt/zimbra/bin/zmprov -l gaa | grep -v admin | grep -v spam | grep -v ham | grep -v virus | grep -v galsync > users.txt
-USERS=$(cat /etc/zabbix/scripts/users.txt)
-for l in $USERS
-	do
-		LOAD_MSG=$(/opt/zimbra/libexec/zmmsgtrace --sender $l --time $DATE | grep "$l -->")
-		echo -e "$LOAD_MSG" >> /etc/zabbix/scripts/list.txt
-	done
-
-for l in $USERS
-	do
-		LOAD_MSG1=$(/opt/zimbra/libexec/zmmsgtrace --sender $l --time $DATE --id reject| grep "$l -->")
-		echo -e "$LOAD_MSG1" >> /etc/zabbix/scripts/list_reject.txt
-	done
-}
+#function Sender(){
+#rm -rf /etc/zabbix/scripts/list.txt
+#rm -rf /etc/zabbix/scripts/list_reject.txt
+#DATE=$(date +%Y%m%d)
+#/opt/zimbra/bin/zmprov -l gaa | grep -v admin | grep -v spam | grep -v ham | grep -v virus | grep -v galsync > users.txt
+#USERS=$(cat /etc/zabbix/scripts/users.txt)
+#for l in $USERS
+#	do
+#		LOAD_MSG=$(/opt/zimbra/libexec/zmmsgtrace --sender $l --time $DATE | grep "$l -->")
+#		echo -e "$LOAD_MSG" >> /etc/zabbix/scripts/list.txt
+#	done
+#
+#for l in $USERS
+#	do
+#		LOAD_MSG1=$(/opt/zimbra/libexec/zmmsgtrace --sender $l --time $DATE --id reject| grep "$l -->")
+#		echo -e "$LOAD_MSG1" >> /etc/zabbix/scripts/list_reject.txt
+#	done
+#}
 
 function Update(){
 echo "Apagando arquivos de instalação da versão anterior"
