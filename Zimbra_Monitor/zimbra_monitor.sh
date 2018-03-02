@@ -257,7 +257,7 @@ elif test $WHO_CHECK = "serv_status"
 		Services_Status $2
 elif test $WHO_CHECK = "sender"
 	then
-	#	Sender
+		echo "função desativada"
 elif test $WHO_CHECK = "version"
 	then
 		echo $VERSION
