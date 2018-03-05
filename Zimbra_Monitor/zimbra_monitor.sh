@@ -1,5 +1,5 @@
 #!/bin/bash
-#		Versão 1.1
+#		Versão 1.0
 #
 #		zimbra_monitor.sh - Monitoramento em Zabbix
 #
@@ -214,12 +214,12 @@ echo "Reiniciando zabbix-agent"
 WHO_CHECK=$1
 VERSION="1.0"
 BAD_PAR="
-opção invalida -- '$1'
-Use 'zimbra_monitor.sh help' para mais informações."
+opcao invalida -- '$1'
+Use 'zimbra_monitor.sh help' para mais informacoes."
 
 HELP="
 		Zimbra Monitor $VERSION
-USO: zimbra_monitor.sh [função] [parametro 1] [parametro 2] ...
+USO: zimbra_monitor.sh [funcao] [parametro 1] [parametro 2] ...
 
 FUNÇOES
 
@@ -239,9 +239,9 @@ FUNÇOES ESPECIAIS
 OUTRAS FUNÇOES
 
 	- help						Mostra esta tela de ajuda.
-	- version					Mostra a versão do programa.
-	- update					Checa novas versões, e atualiza o programa.
-	- install					Instala a ultima versão obtida.
+	- version					Mostra a versao do programa.
+	- update					Checa novas versoes, e atualiza o programa.
+	- install					Instala a ultima versao obtida.
 	
 	"
 # AQUI SE INICIA O PROGRAMA, TODAS AS FUNÇÕES SAO CARREGADAS A PARTIR DAQUI.
