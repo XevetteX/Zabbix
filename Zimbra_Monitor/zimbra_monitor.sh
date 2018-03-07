@@ -35,10 +35,10 @@
 #	MODIFICADOR_POR	(DD/MM/YYYY)
 #	Matheus.Viana	 21/02/2018		-	Primeira versão.
 #	Matheus.Viana	 26/02/2018 	-	Adicionado função Sender
-#	Matheus.Viana	 01/03/2018		-	Desabilitada a função Sender (exigia muito desempenho do servidor)
+#	Matheus.Viana	 01/03/2018		-	Desabilitada a função Sender (exigia muitos recursos do servidor)
 #	Matheus.Viana	 06/03/2018		-	Adicionado funções Upgrade e Zversion,
 #										organizado o menu
-#
+#	Matheus.Viana	 07/03/2018		-	Refeita a função Sender
 #
 #
 # Licença	: GNU GPL
@@ -70,6 +70,16 @@ echo "Copiando arquivos"
 	
 	cp /Zabbix/Zimbra_Monitor/* /etc/zabbix/scripts/
 
+echo "Modificando arquivos de configuração local"
+	
+	MAIL=$(locate mailq | grep "opt" | grep "sbin") 
+	Zversion=$(su -c "/opt/zimbra/bin/zmcontrol -v" zimbra)
+	Dominios=$(su -c "/opt/zimbra/bin/zmprov gad" zimbra)
+	
+	sed -i "s/^Zversion=/Zversion=$Zversion/" /etc/zabbix/scripts/zimbra_monitor.conf
+	sed -i "s/^Dominios=/Dominios=$Dominios/" /etc/zabbix/scripts/zimbra_monitor.conf
+	sed -i "s/^MAILQ=/MAILQ=$MAIL/" /etc/zabbix/scripts/zimbra_monitor.conf
+	
 echo "Aplicando permissões de execução"
 	
 	chmod +x /etc/zabbix/scripts/zimbra_monitor.sh
@@ -96,7 +106,7 @@ echo "Atualizando arquivo de configuração do zabbix-agent"
 
 echo "Reiniciando zabbix-agent"	
 	pkill zabbix_agentd
-	/usr/sbin/zabbix_agentd
+ 	/usr/sbin/zabbix_agentd
 }
 
 function Update(){
@@ -116,6 +126,7 @@ echo "Executando backup da versão anterior"
 echo "Salvando configurações pessoais"
 
 	cp /etc/zabbix/scripts/zimbra_monitor.conf /etc/zabbix/scripts/zimbra_monitor.conf-bkp
+	rm -rf /etc/zabbix/scripts/zimbra_monitor.conf
 
 echo "Atualizando arquivos"
 	
@@ -132,17 +143,15 @@ echo "Instalando nova versão"
 
 function Upgrade(){
 echo "Instalando arquivos de configuração"
-	MAILQ=$(cat /etc/zabbix/scripts/zimbra_monitor.sh-bkp | grep "MAILQ=" | cut -d'(' -f 2 | cut -d' ' -f1) 
-	echo "MAILQ=$MAILQ" > /etc/zabbix/scripts/zimbra_monitor.conf
-	DOM=$(su -c "/opt/zimbra/bin/zmprov gad" zimbra)
-	echo DOM=$DOM
-
-# ABAIXO SO MODIFIQUE SE A ATUALIZAÇÃO TIVER NOVAS FUNÇÕES
-#
-#APLICAR AQUI NOVOS PARAMETROS
-#Exemplo abaixo
-#	echo "UserParameter=Mail.Services_Discovery,/etc/zabbix/scripts/zimbra_monitor.sh Services_Discovery" >> /etc/zabbix/zabbix_agentd.conf
-
+	
+	Zversion=$(su -c "/opt/zimbra/bin/zmcontrol -v" zimbra)
+	Dominios=$(su -c "/opt/zimbra/bin/zmprov gad" zimbra)
+	MAIL=$(cat /etc/zimbra/scripts/zimbra_monitor.conf-bkp | grep "MAILQ=" )
+	
+	sed -i "s/^Zversion=/Zversion=$Zversion/" /etc/zabbix/scripts/zimbra_monitor.conf
+	sed -i "s/^Dominios=/Dominios=$Dominios/" /etc/zabbix/scripts/zimbra_monitor.conf
+	sed -i "s/^MAILQ=/MAILQ=$MAIL/" /etc/zabbix/scripts/zimbra_monitor.conf
+	
 echo "Adicionando novos parametros de usuario"
 
 	echo "UserParameter=Zversion,/etc/zabbix/scripts/zimbra_monitor.sh Zversion" >> /etc/zabbix/zabbix_agentd.conf
@@ -211,12 +220,11 @@ fi
 
 function Sender(){
 rm -rf /etc/zabbix/scripts/send.txt
-SENDER=$(cat /etc/zabbix/scripts/zimbra_monitor.conf | fgrep "DOM=" | cut -d'=' -f2)
+SENDER=$(cat /etc/zabbix/scripts/zimbra_monitor.conf | fgrep "Dominios=" | cut -d'=' -f2)
 YESTERDAY=$(date -d "yesterday 13:00" '+%Y%m%d')
-TODAY=$(date +%Y%m%d)
 for s in $SENDER
 	do
-		/opt/zimbra/libexec/zmmsgtrace --sender $s --time $YESTERDAY,$TODAY | grep "$SENDER -->" | sort | grep -v admin | grep -v spam | grep -v ham | grep -v virus | grep -v galsync >> /etc/zabbix/scripts/send.txt
+		/opt/zimbra/libexec/zmmsgtrace --sender $s --time $YESTERDAY | grep "$SENDER -->" | sort | grep -v admin | grep -v spam | grep -v ham | grep -v virus | grep -v galsync >> /etc/zabbix/scripts/send.txt
 	done
 }
 
@@ -233,7 +241,7 @@ USO: zimbra_monitor.sh [funcao] [parametro 1] [parametro 2] ...
 
 FUNÇOES
 
-	- blacklist [blacklist]		Consulta se o dominio esta na blacklist especificada.
+	- blacklist [blacklist]				Consulta se o dominio esta na blacklist especificada.
 	- fila						Mostra a fila de email.
 	- Zversion 					Mostra a versão do Zimbra
 		
@@ -245,8 +253,7 @@ FUNÇOES ESPECIAIS
 	- serv_discovery				Coleta todos os serviços do zimbra.
 	- serv_status					Coleta o status dos serviços do zimbra. 
 	- sent						Consulta quantos emails foram enviados no dia.
-	- reject					Consulta quantos emails falharam o envio no dia.
-
+	
 OUTRAS FUNÇOES
 
 	- help						Mostra esta tela de ajuda.
@@ -278,15 +285,13 @@ elif test $WHO_CHECK = "blacklist"
 elif test $WHO_CHECK = "fila"
 	then
 		Queue
-elif test $WHO_CHECK = "reject"
-	then
-		cat /etc/zabbix/scripts/list_reject.txt | grep ">" | wc -l
 elif test $WHO_CHECK = "sender"
 	then
-		echo "função desativada"
+		echo "função em nivel alpha de desenvolvimento, não habilitar em produção, para habilitar descomente a linha no crontab"
+		Sender
 elif test $WHO_CHECK = "sent"
 	then
-		cat /etc/zabbix/scripts/list.txt | grep ">" | wc -l
+		cat /etc/zabbix/scripts/send.txt | grep ">" | wc -l
 elif test $WHO_CHECK = "serv_discovery"
 	then
 		Services_Discovery
@@ -295,7 +300,7 @@ elif test $WHO_CHECK = "serv_status"
 		Services_Status $2
 elif test $WHO_CHECK = "Zversion"
 	then
-		su -c "/opt/zimbra/bin/zmcontrol -v" zimbra
+		cat /etc/zabbix/scripts/zimbra_monitor.conf | fgrep "Zversion=" | cut -d'=' -f 2
 	else 
 		echo $BAD_PAR
 fi
