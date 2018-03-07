@@ -1,5 +1,5 @@
 #!/bin/bash
-#		Versão 1.0
+#		Versão 1.1
 #
 #		zimbra_monitor.sh - Monitoramento em Zabbix
 #
@@ -33,128 +33,16 @@
 #
 # ------------------------------------------------------------------------
 #	MODIFICADOR_POR	(DD/MM/YYYY)
-#	Matheus.Viana	 21/02/2018	-	Primeira versão.
+#	Matheus.Viana	 21/02/2018		-	Primeira versão.
 #	Matheus.Viana	 26/02/2018 	-	Adicionado função Sender
+#	Matheus.Viana	 01/03/2018		-	Desabilitada a função Sender (exigia muito desempenho do servidor)
+#	Matheus.Viana	 06/03/2018		-	Adicionado funções Upgrade e Zversion,
+#										organizado o menu
+#
 #
 #
 # Licença	: GNU GPL
 #
-
-function Services_Discovery(){
-HOUSECLEANER=$(cat /tmp/zmcontrol_status.log | grep -v Host | grep -v not | rev | cut -d' ' -f 2- | rev | sed 's/ w/_w/')
-RESULT=$(for a in $HOUSECLEANER
-	do 
-		echo -n '{"{#SERVICE}":"'${a}'"},' | sed 's/_w/ w/'
-	done)
-VAR=$(echo -e '{"data":['$RESULT']' | sed -e 's:\},]$:\}]:' )
-echo -n $VAR'}'
-}
-
-function Services_Status(){
-TARGET=$2
-COUNT_LINE=$(cat /tmp/zmcontrol_status.log | grep -v not | grep "$TARGET")
-STATUS_SERVICE=$(echo $COUNT_LINE | rev | cut -d' ' -f 1 | rev )
-if test $STATUS_SERVICE = "Stopped"
-	then 
-		echo 1
-	else
-		echo 0
-fi
-}
-
-function Queue(){
-MAILQ=$(/opt/zimbra/common/sbin/mailq | grep Request | awk -F" " '{print $5}')
-
-if [ -z "$MAILQ" ]
-	then	
-		echo 0
-	
-	elif [ "$MAILQ" -ge 1 ]
-	then
-	echo "$MAILQ"
-fi
-}
-
-function Blacklist(){
-DOM=$1
-BL=$2
-RESOLVED=$(dig +short $DOM)
-LOAD_RESOLVED=$(echo $RESOLVED)
-P1=$(echo $LOAD_RESOLVED | cut -d '.' -f 4)
-P2=$(echo $LOAD_RESOLVED | cut -d '.' -f 3)
-P3=$(echo $LOAD_RESOLVED | cut -d '.' -f 2)
-P4=$(echo $LOAD_RESOLVED | cut -d '.' -f 1)
-REVERSED=$(echo "$P1.$P2.$P3.$P4")
-TEST_THIS=$(echo $REVERSED.$BL) 
-LOAD_BL=$(dig +short -t a $TEST_THIS)
-if [ -z $LOAD_BL ]
-	then
-		echo 0
-	else
-		echo 1
-fi
-}
-
-#
-#							FIXME
-#
-#function Sender(){
-#rm -rf /etc/zabbix/scripts/list.txt
-#rm -rf /etc/zabbix/scripts/list_reject.txt
-#DATE=$(date +%Y%m%d)
-#/opt/zimbra/bin/zmprov -l gaa | grep -v admin | grep -v spam | grep -v ham | grep -v virus | grep -v galsync > users.txt
-#USERS=$(cat /etc/zabbix/scripts/users.txt)
-#for l in $USERS
-#	do
-#		LOAD_MSG=$(/opt/zimbra/libexec/zmmsgtrace --sender $l --time $DATE | grep "$l -->")
-#		echo -e "$LOAD_MSG" >> /etc/zabbix/scripts/list.txt
-#	done
-#
-#for l in $USERS
-#	do
-#		LOAD_MSG1=$(/opt/zimbra/libexec/zmmsgtrace --sender $l --time $DATE --id reject| grep "$l -->")
-#		echo -e "$LOAD_MSG1" >> /etc/zabbix/scripts/list_reject.txt
-#	done
-#}
-
-function Update(){
-echo "Apagando arquivos de instalação da versão anterior"
-
-	rm -rf /Zabbix/
-
-echo "executando backup da versão anterior"
-	
-	cp /etc/zabbix/scripts/zimbra_monitor.sh /etc/zabbix/scripts/zimbra_monitor.sh-bkp
-	rm -rf /etc/zabbix/scripts/zimbra_monitor.sh
-
-echo "Obtendo nova versão"
-	
-	git clone https://github.com/XevetteX/Zabbix/
-
-echo "Instalando nova versão"
-	
-	cp /Zabbix/Zimbra_Monitor/* /etc/zabbix/scripts/
-
-echo "Aplicando permissões de execução"
-		
-	chmod +x /etc/zabbix/scripts/zimbra_monitor.sh
-	
-# ABAIXO SO MODIFIQUE SE A ATUALIZAÇÃO TIVER NOVAS FUNÇÕES
-#echo "Executando backup das configurações do Zabbix_agent"
-#	cp /etc/zabbix/zabbix_agentd.conf /etc/zabbix/zabbix_agentd.conf-bkp
-#echo "Atualizando arquivo de configuração do zabbix-agent"
-#	rm -rf /etc/zabbix/zabbix_agentd.conf
-#	cat -s /etc/zabbix/zabbix_agentd.conf-bkp | grep -v "#" | uniq -u > /etc/zabbix/zabbix_agentd.conf
-#
-#APLICAR AQUI NOVOS PARAMETROS
-#Exemplo abaixo
-#	echo "UserParameter=Mail.Services_Discovery,/etc/zabbix/scripts/zimbra_monitor.sh Services_Discovery" >> /etc/zabbix/zabbix_agentd.conf
-	
-echo "Reiniciando zabbix-agent"	
-	
-	pkill zabbix_agentd
-	/usr/sbin/zabbix_agentd
-}
 
 function Install(){
 DISTRO=$(cat /etc/issue | cut -d' ' -f 1)
@@ -204,17 +92,139 @@ echo "Atualizando arquivo de configuração do zabbix-agent"
 	echo "UserParameter=Mail.Reject,/etc/zabbix/scripts/zimbra_monitor.sh reject" >> /etc/zabbix/zabbix_agentd.conf
 	echo "UserParameter=Zimbra_Monitor_Version,/etc/zabbix/scripts/zimbra_monitor.sh version" >> /etc/zabbix/zabbix_agentd.conf
 	echo "UserParameter=Zimbra_Monitor_Update,/etc/zabbix/scripts/zimbra_monitor.sh update" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Zversion,/etc/zabbix/scripts/zimbra_monitor.sh Zversion" >> /etc/zabbix/zabbix_agentd.conf
 
 echo "Reiniciando zabbix-agent"	
 	pkill zabbix_agentd
 	/usr/sbin/zabbix_agentd
 }
 
+function Update(){
+echo "Apagando arquivos de instalação da versão anterior"
+
+	rm -rf /Zabbix/
+
+echo "Obtendo nova versão"
+	
+	git clone https://github.com/XevetteX/Zabbix/
+	
+echo "Executando backup da versão anterior"
+	
+	cp /etc/zabbix/scripts/zimbra_monitor.sh /etc/zabbix/scripts/zimbra_monitor.sh-bkp
+	rm -rf /etc/zabbix/scripts/zimbra_monitor.sh
+	
+echo "Salvando configurações pessoais"
+
+	cp /etc/zabbix/scripts/zimbra_monitor.conf /etc/zabbix/scripts/zimbra_monitor.conf-bkp
+
+echo "Atualizando arquivos"
+	
+	cp /Zabbix/Zimbra_Monitor/* /etc/zabbix/scripts/
+	
+echo "Aplicando permissões de execução"
+		
+	chmod +x /etc/zabbix/scripts/zimbra_monitor.sh
+
+echo "Instalando nova versão"
+
+		/etc/zabbix/scripts/zimbra_monitor.sh upgrade
+}
+
+function Upgrade(){
+echo "Instalando arquivos de configuração"
+	MAILQ=$(cat /etc/zabbix/scripts/zimbra_monitor.sh-bkp | grep "MAILQ=" | cut -d'(' -f 2 | cut -d' ' -f1) 
+	echo "MAILQ=$MAILQ" > /etc/zabbix/scripts/zimbra_monitor.conf
+	DOM=$(su -c "/opt/zimbra/bin/zmprov gad" zimbra)
+	echo DOM=$DOM
+
+# ABAIXO SO MODIFIQUE SE A ATUALIZAÇÃO TIVER NOVAS FUNÇÕES
+#
+#APLICAR AQUI NOVOS PARAMETROS
+#Exemplo abaixo
+#	echo "UserParameter=Mail.Services_Discovery,/etc/zabbix/scripts/zimbra_monitor.sh Services_Discovery" >> /etc/zabbix/zabbix_agentd.conf
+
+echo "Adicionando novos parametros de usuario"
+
+	echo "UserParameter=Zversion,/etc/zabbix/scripts/zimbra_monitor.sh Zversion" >> /etc/zabbix/zabbix_agentd.conf
+	
+echo "Reiniciando zabbix-agent"	
+	
+	pkill zabbix_agentd
+	/usr/sbin/zabbix_agentd
+}
+
+function Blacklist(){
+DOM=$(wget http://ipecho.net/plain -O - -q; echo)
+BL=$2
+RESOLVED=$(dig +short $DOM)
+LOAD_RESOLVED=$(echo $RESOLVED)
+P1=$(echo $LOAD_RESOLVED | cut -d '.' -f 4)
+P2=$(echo $LOAD_RESOLVED | cut -d '.' -f 3)
+P3=$(echo $LOAD_RESOLVED | cut -d '.' -f 2)
+P4=$(echo $LOAD_RESOLVED | cut -d '.' -f 1)
+REVERSED=$(echo "$P1.$P2.$P3.$P4")
+TEST_THIS=$(echo $REVERSED.$BL) 
+LOAD_BL=$(dig +short -t a $TEST_THIS)
+if [ -z $LOAD_BL ]
+	then
+		echo 0
+	else
+		echo 1
+fi
+}
+
+function Queue(){
+BIN=$(cat /etc/zabbix/scripts/zimbra_monitor.conf | grep "MAILQ=" | cut -d'=' -f 2)
+MAILQ=$($BIN | grep Request | awk -F" " '{print $5}')
+
+if [ -z "$MAILQ" ]
+	then	
+		echo 0
+	
+	elif [ "$MAILQ" -ge 1 ]
+	then
+	echo "$MAILQ"
+fi
+}
+
+function Services_Discovery(){
+HOUSECLEANER=$(cat /tmp/zmcontrol_status.log | grep -v Host | grep -v not | rev | cut -d' ' -f 2- | rev | sed 's/ w/_w/')
+RESULT=$(for a in $HOUSECLEANER
+	do 
+		echo -n '{"{#SERVICE}":"'${a}'"},' | sed 's/_w/ w/'
+	done)
+VAR=$(echo -e '{"data":['$RESULT']' | sed -e 's:\},]$:\}]:' )
+echo -n $VAR'}'
+}
+
+function Services_Status(){
+TARGET=$2
+COUNT_LINE=$(cat /tmp/zmcontrol_status.log | grep -v not | grep "$TARGET")
+STATUS_SERVICE=$(echo $COUNT_LINE | rev | cut -d' ' -f 1 | rev )
+if test $STATUS_SERVICE = "Stopped"
+	then 
+		echo 1
+	else
+		echo 0
+fi
+}
+
+function Sender(){
+rm -rf /etc/zabbix/scripts/send.txt
+SENDER=$(cat /etc/zabbix/scripts/zimbra_monitor.conf | fgrep "DOM=" | cut -d'=' -f2)
+YESTERDAY=$(date -d "yesterday 13:00" '+%Y%m%d')
+TODAY=$(date +%Y%m%d)
+for s in $SENDER
+	do
+		/opt/zimbra/libexec/zmmsgtrace --sender $s --time $YESTERDAY,$TODAY | grep "$SENDER -->" | sort | grep -v admin | grep -v spam | grep -v ham | grep -v virus | grep -v galsync >> /etc/zabbix/scripts/send.txt
+	done
+}
+
 # VARIAVEIS DO MENU
 WHO_CHECK=$1
-VERSION="1.0"
+VERSION="1.1"
 BAD_PAR="
-opcao invalida -- '$1'
+Opcao invalida -- '$1'
 Use 'zimbra_monitor.sh help' para mais informacoes."
 
 HELP="
@@ -223,8 +233,9 @@ USO: zimbra_monitor.sh [funcao] [parametro 1] [parametro 2] ...
 
 FUNÇOES
 
-	- blacklist [dominio] [blacklist]		Consulta se o dominio esta na blacklist especificada.
+	- blacklist [blacklist]		Consulta se o dominio esta na blacklist especificada.
 	- fila						Mostra a fila de email.
+	- Zversion 					Mostra a versão do Zimbra
 		
 FUNÇOES ESPECIAIS	
 	
@@ -246,39 +257,45 @@ OUTRAS FUNÇOES
 	"
 # AQUI SE INICIA O PROGRAMA, TODAS AS FUNÇÕES SAO CARREGADAS A PARTIR DAQUI.
 
-if test $WHO_CHECK = "blacklist"
+if test $WHO_CHECK = "help"
 	then 
-		Blacklist $2 $3
+		echo $HELP
+elif test $WHO_CHECK = "install"
+	then
+		Install
+elif test $WHO_CHECK = "update"
+	then
+		Update
+elif test $WHO_CHECK = "upgrade"
+	then
+		Upgrade
+elif test $WHO_CHECK = "version"
+	then
+		echo $VERSION
+elif test $WHO_CHECK = "blacklist"
+	then
+		Blacklist $3
 elif test $WHO_CHECK = "fila"
 	then
 		Queue
+elif test $WHO_CHECK = "reject"
+	then
+		cat /etc/zabbix/scripts/list_reject.txt | grep ">" | wc -l
+elif test $WHO_CHECK = "sender"
+	then
+		echo "função desativada"
+elif test $WHO_CHECK = "sent"
+	then
+		cat /etc/zabbix/scripts/list.txt | grep ">" | wc -l
 elif test $WHO_CHECK = "serv_discovery"
 	then
 		Services_Discovery
 elif test $WHO_CHECK = "serv_status"
-	then
-		Services_Status $2
-elif test $WHO_CHECK = "sender"
-	then
-		echo "função desativada"
-elif test $WHO_CHECK = "version"
-	then
-		echo $VERSION
-elif test $WHO_CHECK = "update"
-	then
-		Update
-elif test $WHO_CHECK = "install"
-	then
-		Install
-elif test $WHO_CHECK = "sent"
-	then
-		cat /etc/zabbix/scripts/list.txt | grep ">" | wc -l
-elif test $WHO_CHECK = "reject"
-	then
-		cat /etc/zabbix/scripts/list_reject.txt | grep ">" | wc -l
-elif test $WHO_CHECK = "help"
 	then 
-		echo "$HELP"
+		Services_Status $2
+elif test $WHO_CHECK = "Zversion"
+	then
+		su -c "/opt/zimbra/bin/zmcontrol -v" zimbra
 	else 
 		echo $BAD_PAR
 fi
