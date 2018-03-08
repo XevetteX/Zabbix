@@ -1,7 +1,7 @@
 #!/bin/bash
 #		Versão 1.1
 #
-#		zimbra_monitor.sh - Monitoramento em Zabbix
+#		zimbra_monitor.sh - Monitoramento Zimbra no Zabbix
 #
 # -----------------------------------------------------------------------
 # 	
@@ -12,22 +12,24 @@
 #	DESCRIÇÃO :
 #
 # 		Este programa tem como função auxiliar o 
-#		monitorameto com Zabbix. Com funções de 
-#		analise de Blacklist, serviços e fila 
+#		monitorameto do Zimbra no Zabbix. Com funções de 
+#		analise de Blacklist, serviços, fila e etc.
 #
 # ------------------------------------------------------------------------
 #	NOTAS:
-#
-# 		Utiliza do pacote dig para fazer as 
+#		
+#		Utiliza o arquivo /etc/zabbix/scripts/zimbra_monitor.conf
+#		para carregar parametros do programa
+# 		
+#		Utiliza do pacote dig para fazer as 
 #		consultas em blacklist
 #
 # 		Utiliza o arquivo /tmp/zmcontrol_status.log
-#		para analize dos serviços.
+#		para analise dos serviços.
 #		
-#		Utiliza do arquivo /etc/zabbix/scripts/list.txt
+#		Utiliza do arquivo /etc/zabbix/scripts/send.txt
 #		Para realizar a checagem de quantidade de emails
-#		enviados e /etc/zabbix/scripts/list_reject.txt
-#		para carregar os emails com falha de envio
+#		enviados.
 # 		
 #		Utiliza o repositorio do github para atualizações
 #
@@ -36,9 +38,11 @@
 #	Matheus.Viana	 21/02/2018		-	Primeira versão.
 #	Matheus.Viana	 26/02/2018 	-	Adicionado função Sender
 #	Matheus.Viana	 01/03/2018		-	Desabilitada a função Sender (exigia muitos recursos do servidor)
-#	Matheus.Viana	 06/03/2018		-	Adicionado funções Upgrade e Zversion,
+#	Matheus.Viana	 06/03/2018		-	Adicionado as funções Upgrade e Zversion,
 #										organizado o menu
-#	Matheus.Viana	 07/03/2018		-	Refeita a função Sender
+#	Matheus.Viana	 07/03/2018		-	Corrigido a a função Sender
+#	Matheus.Viana	 08/03/2018		-	Adicionado a função AuthFail
+#
 #
 #
 # Licença	: GNU GPL
@@ -162,6 +166,23 @@ echo "Reiniciando zabbix-agent"
 	/usr/sbin/zabbix_agentd
 }
 
+function AuthFail(){
+rm -rf /etc/zabbix/scripts/ipauthfailed.txt
+YESTERDAY=$(date -d "yesterday" | cut -d' ' -f 2-4)
+
+cat /var/log/maillog | grep "$YESTERDAY" | grep "authentication failed:" | cut -d'[' -f 3 | cut -d']' -f1 | sort | uniq -c | sort -n >> /etc/zabbix/scripts/ipauthfailed.txt
+IPFAILED=$(cat /etc/zabbix/scripts/ipauthfailed.txt | rev | sed -e "s/ /=/" | rev )
+RESULT_A=$(for d in $IPFAILED
+	do 
+		ATTACKER=$(echo $d | cut -d'=' -f 2)
+		TRIES=$(echo $d | cut -d'=' -f1)
+		
+		echo -n '{"{#ATTACKER}":"'${ATTACKER}'","{#TRIES}":"'${TRIES}'"},'
+	done)
+VAR_A=$(echo -e '{"data":['$RESULT_A']' | sed -e 's:\},]$:\}]:' )
+echo -n $VAR_A'}'
+ }
+
 function Blacklist(){
 DOM=$(wget http://ipecho.net/plain -O - -q; echo)
 BL=$2
@@ -240,11 +261,13 @@ HELP="
 USO: zimbra_monitor.sh [funcao] [parametro 1] [parametro 2] ...
 
 FUNÇOES
-
-	- blacklist [blacklist]				Consulta se o dominio esta na blacklist especificada.
+	
+	- authfail					Realiza uma consulta nos logs para identificar Ips que estao 
+								realizando ataques forca bruta no zimbra.
+	- blacklist [blacklist]		Consulta se o dominio esta na blacklist especificada.
 	- fila						Mostra a fila de email.
-	- Zversion 					Mostra a versão do Zimbra
-		
+	- Zversion 					Mostra a versao do Zimbra
+			
 FUNÇOES ESPECIAIS	
 	
 	Os comandos seguintes utilizam arquivos especificos para serem realizados,
@@ -279,6 +302,9 @@ elif test $WHO_CHECK = "upgrade"
 elif test $WHO_CHECK = "version"
 	then
 		echo $VERSION
+elif test $WHO_CHECK = "authfail"
+	then
+		AuthFail
 elif test $WHO_CHECK = "blacklist"
 	then
 		Blacklist $3
@@ -291,7 +317,7 @@ elif test $WHO_CHECK = "sender"
 		Sender
 elif test $WHO_CHECK = "sent"
 	then
-		cat /etc/zabbix/scripts/send.txt | grep ">" | wc -l
+		cat /etc/zabbix/scripts/send.txt | wc -l
 elif test $WHO_CHECK = "serv_discovery"
 	then
 		Services_Discovery
