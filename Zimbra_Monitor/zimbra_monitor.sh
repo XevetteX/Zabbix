@@ -76,7 +76,7 @@ echo "Copiando arquivos"
 
 echo "Modificando arquivos de configuração local"
 	
-	MAIL=$(locate mailq | grep "opt" | grep "sbin") 
+	MAIL=$(locate mailq | fgrep "opt" | fgrep "sbin") 
 	Zversion=$(su -c "/opt/zimbra/bin/zmcontrol -v" zimbra)
 	Dominios=$(su -c "/opt/zimbra/bin/zmprov gad" zimbra)
 	
@@ -92,23 +92,26 @@ echo "Executando backup das configurações do Zabbix_agent"
 
 	cp /etc/zabbix/zabbix_agentd.conf /etc/zabbix/zabbix_agentd.conf-bkp
 
-echo "Atualizando arquivo de configuração do zabbix-agent"
+echo "Atualizando arquivo de configuração do Zabbix-agent"
 
 	rm -rf /etc/zabbix/zabbix_agentd.conf
-	cat -s /etc/zabbix/zabbix_agentd.conf-bkp | grep -v "#" | grep -v "Timeout=3"| uniq -u > /etc/zabbix/zabbix_agentd.conf
+	cat -s /etc/zabbix/zabbix_agentd.conf-bkp | fgrep -v "#" | fgrep -v "Timeout=3"| uniq -u > /etc/zabbix/zabbix_agentd.conf
 
 	echo "Timeout=30" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=AuthFail./etc/zabbix/scripts/zimbra_monitor.sh authfail" >> /etc/zabbix/zabbix_agentd.conf
 	echo "UserParameter=Mail.Services_Discovery,/etc/zabbix/scripts/zimbra_monitor.sh serv_discovery" >> /etc/zabbix/zabbix_agentd.conf
 	echo "UserParameter=Blacklist[*],/etc/zabbix/scripts/zimbra_monitor.sh blacklist $1 $2" >> /etc/zabbix/zabbix_agentd.conf
 	echo "UserParameter=Fila,/etc/zabbix/scripts/zimbra_monitor.sh fila" >> /etc/zabbix/zabbix_agentd.conf
 	echo "UserParameter=Mail.Services_Status[*],/etc/zabbix/scripts/zimbra_monitor.sh serv_status $1" >> /etc/zabbix/zabbix_agentd.conf
 	echo "UserParameter=Mail.Sent,/etc/zabbix/scripts/zimbra_monitor.sh sent" >> /etc/zabbix/zabbix_agentd.conf
 	echo "UserParameter=Mail.Reject,/etc/zabbix/scripts/zimbra_monitor.sh reject" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=Tries.Fail[*],/etc/zabbix/scrips/zimbra_monitor.sh tryfail $1" >> /etc/zabbix/zabbix_agentd.conf
 	echo "UserParameter=Zimbra_Monitor_Version,/etc/zabbix/scripts/zimbra_monitor.sh version" >> /etc/zabbix/zabbix_agentd.conf
 	echo "UserParameter=Zimbra_Monitor_Update,/etc/zabbix/scripts/zimbra_monitor.sh update" >> /etc/zabbix/zabbix_agentd.conf
 	echo "UserParameter=Zversion,/etc/zabbix/scripts/zimbra_monitor.sh Zversion" >> /etc/zabbix/zabbix_agentd.conf
+	
 
-echo "Reiniciando zabbix-agent"	
+echo "Reiniciando Zabbix-agent"	
 	pkill zabbix_agentd
  	/usr/sbin/zabbix_agentd
 }
@@ -150,7 +153,7 @@ echo "Instalando arquivos de configuração"
 	
 	Zversion=$(su -c "/opt/zimbra/bin/zmcontrol -v" zimbra)
 	Dominios=$(su -c "/opt/zimbra/bin/zmprov gad" zimbra)
-	MAIL=$(cat /etc/zimbra/scripts/zimbra_monitor.conf-bkp | grep "MAILQ=" )
+	MAIL=$(cat /etc/zimbra/scripts/zimbra_monitor.conf-bkp | fgrep "MAILQ=" )
 	
 	sed -i "s/^Zversion=/Zversion=$Zversion/" /etc/zabbix/scripts/zimbra_monitor.conf
 	sed -i "s/^Dominios=/Dominios=$Dominios/" /etc/zabbix/scripts/zimbra_monitor.conf
@@ -168,19 +171,24 @@ echo "Reiniciando zabbix-agent"
 
 function AuthFail(){
 rm -rf /etc/zabbix/scripts/ipauthfailed.txt
-YESTERDAY=$(date -d "yesterday" | cut -d' ' -f 2-4)
 
-cat /var/log/maillog | grep "$YESTERDAY" | grep "authentication failed:" | cut -d'[' -f 3 | cut -d']' -f1 | sort | uniq -c | sort -n >> /etc/zabbix/scripts/ipauthfailed.txt
+TODAY=$(date | cut -d' ' -f 2-4)
+
+	cat /var/log/maillog | fgrep "$TODAY" | fgrep "authentication failed:" | cut -d'[' -f 3 | cut -d']' -f1 | sort | uniq -c | sort -n >> /etc/zabbix/scripts/ipauthfailed.txt
+
 IPFAILED=$(cat /etc/zabbix/scripts/ipauthfailed.txt | rev | sed -e "s/ /=/" | rev )
 RESULT_A=$(for d in $IPFAILED
 	do 
 		ATTACKER=$(echo $d | cut -d'=' -f 2)
-		TRIES=$(echo $d | cut -d'=' -f1)
+		FAIL=$(echo $d | cut -d'=' -f 2)
 		
-		echo -n '{"{#ATTACKER}":"'${ATTACKER}'","{#TRIES}":"'${TRIES}'"},'
+		if test $FAIL -ge 20
+			then 
+				echo -n '{"{#ATTACKER}":"'${ATTACKER}'"},'
+		fi
 	done)
 VAR_A=$(echo -e '{"data":['$RESULT_A']' | sed -e 's:\},]$:\}]:' )
-echo -n $VAR_A'}'
+		echo -n $VAR_A'}'
  }
 
 function Blacklist(){
@@ -203,9 +211,13 @@ if [ -z $LOAD_BL ]
 fi
 }
 
+function TryFail(){
+cat /etc/zabbix/scripts/ipauthfailed.txt | fgrep $2 | rev | sed -e "s/ /=/" | rev | cut -d'=' -f 1
+}
+
 function Queue(){
-BIN=$(cat /etc/zabbix/scripts/zimbra_monitor.conf | grep "MAILQ=" | cut -d'=' -f 2)
-MAILQ=$($BIN | grep Request | awk -F" " '{print $5}')
+BIN=$(cat /etc/zabbix/scripts/zimbra_monitor.conf | fgrep "MAILQ=" | cut -d'=' -f 2)
+MAILQ=$($BIN | fgrep Request | awk -F" " '{print $5}')
 
 if [ -z "$MAILQ" ]
 	then	
@@ -218,7 +230,7 @@ fi
 }
 
 function Services_Discovery(){
-HOUSECLEANER=$(cat /tmp/zmcontrol_status.log | grep -v Host | grep -v not | rev | cut -d' ' -f 2- | rev | sed 's/ w/_w/')
+HOUSECLEANER=$(cat /tmp/zmcontrol_status.log | fgrep -v Host | fgrep -v not | rev | cut -d' ' -f 2- | rev | sed 's/ w/_w/')
 RESULT=$(for a in $HOUSECLEANER
 	do 
 		echo -n '{"{#SERVICE}":"'${a}'"},' | sed 's/_w/ w/'
@@ -229,7 +241,7 @@ echo -n $VAR'}'
 
 function Services_Status(){
 TARGET=$2
-COUNT_LINE=$(cat /tmp/zmcontrol_status.log | grep -v not | grep "$TARGET")
+COUNT_LINE=$(cat /tmp/zmcontrol_status.log | fgrep -v not | fgrep "$TARGET")
 STATUS_SERVICE=$(echo $COUNT_LINE | rev | cut -d' ' -f 1 | rev )
 if test $STATUS_SERVICE = "Stopped"
 	then 
@@ -245,7 +257,7 @@ SENDER=$(cat /etc/zabbix/scripts/zimbra_monitor.conf | fgrep "Dominios=" | cut -
 YESTERDAY=$(date -d "yesterday 13:00" '+%Y%m%d')
 for s in $SENDER
 	do
-		/opt/zimbra/libexec/zmmsgtrace --sender $s --time $YESTERDAY | grep "$SENDER -->" | sort | grep -v admin | grep -v spam | grep -v ham | grep -v virus | grep -v galsync >> /etc/zabbix/scripts/send.txt
+		/opt/zimbra/libexec/zmmsgtrace --sender $s --time $YESTERDAY | fgrep "$s -->" | sort | fgrep -v admin | fgrep -v spam | fgrep -v ham | fgrep -v virus | fgrep -v galsync >> /etc/zabbix/scripts/send.txt
 	done
 }
 
@@ -263,7 +275,8 @@ USO: zimbra_monitor.sh [funcao] [parametro 1] [parametro 2] ...
 FUNÇOES
 	
 	- authfail					Realiza uma consulta nos logs para identificar Ips que estao 
-								realizando ataques forca bruta no zimbra.
+								realizando ataques forca bruta no zimbra, 
+								e apresenta o resultado em formato JSON.
 	- blacklist [blacklist]		Consulta se o dominio esta na blacklist especificada.
 	- fila						Mostra a fila de email.
 	- Zversion 					Mostra a versao do Zimbra
@@ -289,7 +302,7 @@ OUTRAS FUNÇOES
 
 if test $WHO_CHECK = "help"
 	then 
-		echo $HELP
+		echo "$HELP"
 elif test $WHO_CHECK = "install"
 	then
 		Install
@@ -311,6 +324,9 @@ elif test $WHO_CHECK = "blacklist"
 elif test $WHO_CHECK = "fila"
 	then
 		Queue
+elif test $WHO_CHECK = "tryfail"
+		then
+			TryFail $2
 elif test $WHO_CHECK = "sender"
 	then
 		echo "função em nivel alpha de desenvolvimento, não habilitar em produção, para habilitar descomente a linha no crontab"
@@ -328,5 +344,5 @@ elif test $WHO_CHECK = "Zversion"
 	then
 		cat /etc/zabbix/scripts/zimbra_monitor.conf | fgrep "Zversion=" | cut -d'=' -f 2
 	else 
-		echo $BAD_PAR
+		echo "$BAD_PAR"
 fi
