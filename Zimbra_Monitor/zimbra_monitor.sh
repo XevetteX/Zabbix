@@ -98,7 +98,7 @@ echo "Atualizando arquivo de configuração do Zabbix-agent"
 	cat -s /etc/zabbix/zabbix_agentd.conf-bkp | fgrep -v "#" | fgrep -v "Timeout=3"| uniq -u > /etc/zabbix/zabbix_agentd.conf
 
 	echo "Timeout=30" >> /etc/zabbix/zabbix_agentd.conf
-	echo "UserParameter=AuthFail./etc/zabbix/scripts/zimbra_monitor.sh authfail" >> /etc/zabbix/zabbix_agentd.conf
+	echo "UserParameter=AuthFail,/etc/zabbix/scripts/zimbra_monitor.sh authfail" >> /etc/zabbix/zabbix_agentd.conf
 	echo "UserParameter=Mail.Services_Discovery,/etc/zabbix/scripts/zimbra_monitor.sh serv_discovery" >> /etc/zabbix/zabbix_agentd.conf
 	echo "UserParameter=Blacklist[*],/etc/zabbix/scripts/zimbra_monitor.sh blacklist $1 $2" >> /etc/zabbix/zabbix_agentd.conf
 	echo "UserParameter=Fila,/etc/zabbix/scripts/zimbra_monitor.sh fila" >> /etc/zabbix/zabbix_agentd.conf
@@ -275,8 +275,8 @@ USO: zimbra_monitor.sh [funcao] [parametro 1] [parametro 2] ...
 FUNÇOES
 	
 	- authfail					Realiza uma consulta nos logs para identificar Ips que estao 
-								realizando ataques forca bruta no zimbra, 
-								e apresenta o resultado em formato JSON.
+						realizando ataques forca bruta no zimbra, 
+						e apresenta o resultado em formato JSON.
 	- blacklist [blacklist]		Consulta se o dominio esta na blacklist especificada.
 	- fila						Mostra a fila de email.
 	- Zversion 					Mostra a versao do Zimbra
