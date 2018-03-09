@@ -180,7 +180,7 @@ IPFAILED=$(cat /etc/zabbix/scripts/ipauthfailed.txt | rev | sed -e "s/ /=/" | re
 RESULT_A=$(for d in $IPFAILED
 	do 
 		ATTACKER=$(echo $d | cut -d'=' -f 2)
-		FAIL=$(echo $d | cut -d'=' -f 2)
+		FAIL=$(echo $d | cut -d'=' -f 1)
 		
 		if test $FAIL -ge 20
 			then 
@@ -212,7 +212,7 @@ fi
 }
 
 function TryFail(){
-cat /etc/zabbix/scripts/ipauthfailed.txt | fgrep $2 | rev | sed -e "s/ /=/" | rev | cut -d'=' -f 1
+cat /etc/zabbix/scripts/ipauthfailed.txt | fgrep "$2" | rev | sed -e "s/ /=/" | rev | cut -d'=' -f 1
 }
 
 function Queue(){
