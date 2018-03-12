@@ -1,5 +1,5 @@
 #!/bin/bash
-#		Versão 1.1
+#		Versão 1.2(BETA)
 #
 #		zimbra_monitor.sh - Monitoramento Zimbra no Zabbix
 #
@@ -58,12 +58,12 @@ echo "Criando entradas em Crontab"
 			echo "Fazendo backup do Crontab do sistema"
 			cp /var/spool/cron/crontabs/root /var/spool/cron/crontabs/root-bkp
 			echo '*/5 * * * * su -c "/opt/zimbra/bin/zmcontrol status" zimbra > /tmp/zmcontrol_status.log' >> /var/spool/cron/crontabs/root
-			echo '#* 23 * * * /etc/zabbix/scripts/zimbra_monitor.sh sender' >> /var/spool/cron/crontabs/root
+			echo '* 0,2,4,6,8,10,12,14,16,18,20,22 * * * /etc/zabbix/scripts/zimbra_monitor.sh sender' >> /var/spool/cron/crontabs/root
 		else
 			echo "Fazendo backup do Crontab do sistema"
 			cp /var/spool/cron/root /var/spool/cron/root-bkp
 			echo '*/5 * * * * su -c "/opt/zimbra/bin/zmcontrol status" zimbra > /tmp/zmcontrol_status.log' >> /var/spool/cron/root
-			echo '#* 23 * * * /etc/zabbix/scripts/zimbra_monitor.sh sender' >> /var/spool/cron/root
+			echo '* 0,2,4,6,8,10,12,14,16,18,20,22 * * * /etc/zabbix/scripts/zimbra_monitor.sh sender' >> /var/spool/cron/root
 	fi
 
 echo "Criando diretorios"
@@ -149,19 +149,6 @@ echo "Instalando nova versão"
 }
 
 function Upgrade(){
-echo "Instalando arquivos de configuração"
-	
-	Zversion=$(su -c "/opt/zimbra/bin/zmcontrol -v" zimbra)
-	Dominios=$(su -c "/opt/zimbra/bin/zmprov gad" zimbra)
-	MAIL=$(cat /etc/zimbra/scripts/zimbra_monitor.conf-bkp | fgrep "MAILQ=" )
-	
-	sed -i "s/^Zversion=/Zversion=$Zversion/" /etc/zabbix/scripts/zimbra_monitor.conf
-	sed -i "s/^Dominios=/Dominios=$Dominios/" /etc/zabbix/scripts/zimbra_monitor.conf
-	sed -i "s/^MAILQ=/MAILQ=$MAIL/" /etc/zabbix/scripts/zimbra_monitor.conf
-	
-echo "Adicionando novos parametros de usuario"
-
-	echo "UserParameter=Zversion,/etc/zabbix/scripts/zimbra_monitor.sh Zversion" >> /etc/zabbix/zabbix_agentd.conf
 	
 echo "Reiniciando zabbix-agent"	
 	
@@ -192,14 +179,12 @@ VAR_A=$(echo -e '{"data":['$RESULT_A']' | sed -e 's:\},]$:\}]:' )
  }
 
 function Blacklist(){
-DOM=$(wget http://ipecho.net/plain -O - -q; echo)
-BL=$2
-RESOLVED=$(dig +short $DOM)
-LOAD_RESOLVED=$(echo $RESOLVED)
-P1=$(echo $LOAD_RESOLVED | cut -d '.' -f 4)
-P2=$(echo $LOAD_RESOLVED | cut -d '.' -f 3)
-P3=$(echo $LOAD_RESOLVED | cut -d '.' -f 2)
-P4=$(echo $LOAD_RESOLVED | cut -d '.' -f 1)
+IP=$(wget http://ipecho.net/plain -O - -q; echo)
+BL=$PAR2
+P1=$(echo $IP | cut -d '.' -f 4)
+P2=$(echo $IP | cut -d '.' -f 3)
+P3=$(echo $IP | cut -d '.' -f 2)
+P4=$(echo $IP | cut -d '.' -f 1)
 REVERSED=$(echo "$P1.$P2.$P3.$P4")
 TEST_THIS=$(echo $REVERSED.$BL) 
 LOAD_BL=$(dig +short -t a $TEST_THIS)
@@ -212,7 +197,7 @@ fi
 }
 
 function TryFail(){
-cat /etc/zabbix/scripts/ipauthfailed.txt | fgrep "$2" | rev | sed -e "s/ /=/" | rev | cut -d'=' -f 1
+cat /etc/zabbix/scripts/ipauthfailed.txt | fgrep "$PAR1" | rev | sed -e "s/ /=/" | rev | cut -d'=' -f 1
 }
 
 function Queue(){
@@ -240,7 +225,7 @@ echo -n $VAR'}'
 }
 
 function Services_Status(){
-TARGET=$2
+TARGET=$PAR1
 COUNT_LINE=$(cat /tmp/zmcontrol_status.log | fgrep -v not | fgrep "$TARGET")
 STATUS_SERVICE=$(echo $COUNT_LINE | rev | cut -d' ' -f 1 | rev )
 if test $STATUS_SERVICE = "Stopped"
@@ -254,16 +239,18 @@ fi
 function Sender(){
 rm -rf /etc/zabbix/scripts/send.txt
 SENDER=$(cat /etc/zabbix/scripts/zimbra_monitor.conf | fgrep "Dominios=" | cut -d'=' -f2)
-YESTERDAY=$(date -d "yesterday 13:00" '+%Y%m%d')
+TODAY=$(date '+%Y%m%d')
 for s in $SENDER
 	do
-		/opt/zimbra/libexec/zmmsgtrace --sender $s --time $YESTERDAY | fgrep "$s -->" | sort | fgrep -v admin | fgrep -v spam | fgrep -v ham | fgrep -v virus | fgrep -v galsync >> /etc/zabbix/scripts/send.txt
+		/opt/zimbra/libexec/zmmsgtrace --sender $s --time $TODAY | fgrep "$s -->" | sort | fgrep -v admin | fgrep -v spam | fgrep -v ham | fgrep -v virus | fgrep -v galsync >> /etc/zabbix/scripts/send.txt
 	done
 }
 
 # VARIAVEIS DO MENU
 WHO_CHECK=$1
-VERSION="1.1"
+PAR1=$2
+PAR2=$3
+VERSION="1.2(BETA)"
 BAD_PAR="
 Opcao invalida -- '$1'
 Use 'zimbra_monitor.sh help' para mais informacoes."
@@ -320,13 +307,13 @@ elif test $WHO_CHECK = "authfail"
 		AuthFail
 elif test $WHO_CHECK = "blacklist"
 	then
-		Blacklist $3
+		Blacklist $PAR2
 elif test $WHO_CHECK = "fila"
 	then
 		Queue
 elif test $WHO_CHECK = "tryfail"
 		then
-			TryFail $2
+			TryFail $PAR1
 elif test $WHO_CHECK = "sender"
 	then
 		echo "função em nivel alpha de desenvolvimento, não habilitar em produção, para habilitar descomente a linha no crontab"
@@ -339,7 +326,7 @@ elif test $WHO_CHECK = "serv_discovery"
 		Services_Discovery
 elif test $WHO_CHECK = "serv_status"
 	then 
-		Services_Status $2
+		Services_Status $PAR1
 elif test $WHO_CHECK = "Zversion"
 	then
 		cat /etc/zabbix/scripts/zimbra_monitor.conf | fgrep "Zversion=" | cut -d'=' -f 2
